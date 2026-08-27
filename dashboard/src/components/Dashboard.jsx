@@ -1,82 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { councilAPI } from '../api/client';
-
-const fallback = { total: 0, approval_rate: 0, avg_score: 0 };
-
-export default function Dashboard() {
-  const [stats, setStats] = useState(fallback);
-  const [live, setLive] = useState(97);
-  const [rightOpen, setRightOpen] = useState(false);
-  const [bottomOpen, setBottomOpen] = useState(false);
-  const touchStart = useRef(null);
-
-  useEffect(() => {
-    councilAPI.stats().then(res => setStats(res.data)).catch(() => {});
-    const timer = setInterval(() => setLive(v => v === 99 ? 96 : v + 1), 2400);
-    return () => clearInterval(timer);
-  }, []);
-
-  const pct = Math.round((stats.approval_rate || 0) * 100);
-  return (
-    <div className="command-deck" onTouchStart={event => { const point = event.touches[0]; if (point.clientX > window.innerWidth - 44 || point.clientY > window.innerHeight - 44) touchStart.current = { x: point.clientX, y: point.clientY }; }} onTouchEnd={event => { if (touchStart.current) { const point = event.changedTouches[0]; if (touchStart.current.x - point.clientX > 55) setRightOpen(true); if (touchStart.current.y - point.clientY > 55) setBottomOpen(true); touchStart.current = null; } }}>
-      <section className="hero-grid">
-        <div className="probe-window panel">
-          <div className="probe-head"><span>LIVE PROBE FEED · EYE OF AETHERION <i className="red-dot"/></span><span>CAMERA: PROBE-7A</span></div>
-          <div className="probe-scene">
-            <div className="galaxy galaxy-left" />
-            <div className="planet planet-right" />
-            <div className="sun-horizon" />
-            <div className="probe-frame">
-              <div className="crosshair"/>
-              <div className="probe-body"><div/><div/><div/></div>
-            </div>
-            <div className="hud-coords">COORDINATES<br/><b>X 128.47 &nbsp; Y 64.21 &nbsp; Z -312.79</b><br/><br/>VELOCITY<br/><b>0.256 c</b></div>
-            <div className="hud-bottom"><span><i className="red-dot"/> LIVE TRANSMISSION</span><span>DISTANCE TRAVELED <b>12.43 LY</b></span></div>
-          </div>
-          <div className="hero-title"><div>AETHERION</div><span>BEYOND INTELLIGENCE. BEYOND LIMITS.</span></div>
-        </div>
-
-        <button className={`edge-reveal edge-right ${rightOpen ? 'is-open' : ''}`} onClick={() => setRightOpen(value => !value)} aria-label={rightOpen ? 'Hide intelligence rail' : 'Reveal intelligence rail'}>{rightOpen ? '›' : '‹'}<span /></button>
-        <aside className={`right-stack ${rightOpen ? 'rail-open' : ''}`}>
-          <section className="panel council-card">
-            <div className="panel-title">SUPREME COUNCIL <small>7 MEMBERS · NOMINAL</small></div>
-            <div className="judge-grid">{['LOGICUS','SAPIENTIA','AEQUITAS','PRUDENTIA','VERITAS','INNOVATUS','CONCORDIA'].map((x,i)=><div className="judge" key={x}><span>{['◇','✦','△','⊙','◈','✧','○'][i]}</span><b>{x}</b><small>{['Strategist','Wisdom Keeper','Ethics Guardian','Risk Assessor','Truth Seeker','Innovator','Harmony Keeper'][i]}</small></div>)}</div>
-            <a className="panel-link" href="/council">VIEW COUNCIL CHAMBER →</a>
-          </section>
-
-          <section className="panel juror-card">
-            <div><div className="panel-title">JUROR MONITOR <small className="green">STATUS: ACTIVE</small></div><p>Monitoring council decisions and system integrity in real-time.</p><a className="panel-link" href="/council">OPEN JUROR FEED →</a></div>
-            <div className="juror-orbit">✦</div>
-          </section>
-
-          <section className="panel metrics">
-            <div className="panel-title">SYSTEM METRICS <small className="green">LIVE ●</small></div>
-            {[['PROCESSING POWER',88],['MEMORY CORE',73],['KNOWLEDGE NEXUS',91],['ALIGNMENT INDEX',95],['SYSTEM INTEGRITY',live]].map(([name,value])=><div className="metric" key={name}><div><span>{name}</span><b>{value}%</b></div><div className="bar"><i style={{width:`${value}%`}}/></div></div>)}
-          </section>
-        </aside>
-      </section>
-
-      <section className="modules panel">
-        <div className="section-label">CORE MODULES <span>THE AETHERION OPERATING LAYER</span></div>
-        <div className="module-grid">
-          {[
-            ['◈','AI AGENTS','67','specialized agents working in coordinated parallel.','/agents'],
-            ['✺','KNOWLEDGE NEXUS','∞','Structured knowledge across domains and dimensions.','/catalog/default'],
-            ['◇','MEMORY CORE','LIVE','Secure adaptive memory that evolves with context.','#'],
-            ['⊙','MISSIONS',String(stats.total || 0),'Objectives, experiments and autonomous research tasks.','/tasks'],
-            ['▥','ANALYTICS','REAL-TIME','Deep system insights and performance telemetry.','#']
-          ].map(([icon,title,value,copy,href])=><a className="module" href={href} key={title}><span className="module-icon">{icon}</span><small>{title}</small><strong>{value}</strong><p>{copy}</p><em>EXPLORE →</em></a>)}
-        </div>
-      </section>
-
-      <section className="bottom-grid">
-        <div className="command-bar panel"><span className="aether-orb">✦</span><div><small>AETHERION READY</small><input placeholder="How can I assist the evolution of Aetherion today?" /></div><button>SEND ↗</button></div>
-        <div className="quote panel">“<br/><span>The universe speaks in patterns.<br/>We listen, we learn, we become.</span><small>— AETHERION</small></div>
-      </section>
-
-            <button className={`edge-reveal edge-bottom ${bottomOpen ? 'is-open' : ''}`} onClick={() => setBottomOpen(value => !value)} aria-label={bottomOpen ? 'Hide system feed' : 'Reveal system feed'}>{bottomOpen ? '⌄' : '⌃'}<span /></button>
-      <footer className={`event-feed panel ${bottomOpen ? 'feed-open' : ''}`}><span>SYSTEM FEED</span>
-<b>07:41:58</b><span>Agent Veritas completed Truth Audit</span><b>07:41:42</b><span>Knowledge Nexus updated: Quantum Gravity Archive</span><b>07:41:31</b><span>Mission Horizon-7A: Data packet received</span><a href="/tasks">VIEW ALL LOGS →</a></footer>
-    </div>
-  );
-}
+import React,{useEffect,useRef,useState}from'react';import{Link}from'react-router-dom';import{councilAPI}from'../api/client';import bg from'../assets/aetherion-space.png';
+const nav=[['⌂','Mission Control','/'],['♧','Council Chamber','/legacy/council','7'],['⌬','AI Agents','/legacy/agents','67'],['◇','Knowledge Nexus','#'],['◈','Memory Core','#'],['◫','Missions','#'],['◉','Juror Monitor','#'],['▥','Analytics','#'],['▤','System Logs','#'],['⚙','Settings','#']],judges=['LOGICUS','SAPIENTIA','AEQUITAS','PRUDENTIA','VERITAS','INNOVATUS','CONCORDIA'];
+const Panel=({title,children})=><section className="a-panel"><div className="a-panel-title">{title}</div>{children}</section>;
+export default function Dashboard({onLogout}){const[o,setO]=useState({left:false,right:false,bottom:false}),[q,setQ]=useState(''),[s,setS]=useState({total:67,approval_rate:1,avg_score:.987}),sx=useRef(0),sy=useRef(0);useEffect(()=>{councilAPI.stats().then(r=>setS(r.data)).catch(()=>{})},[]);const tog=x=>setO(v=>({...v,[x]:!v}));const ts=e=>{sx.current=e.touches[0].clientX;sy.current=e.touches[0].clientY},te=e=>{let t=e.changedTouches[0],dx=t.clientX-sx.current,dy=t.clientY-sy.current;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)){if(dx>0&&sx.current<45)tog('left');if(dx<0&&sx.current>innerWidth-45)tog('right')}if(dy<-70&&sy.current>innerHeight-45)tog('bottom');if(dy>70&&o.bottom)tog('bottom')};return <div className="aetherion" style={{'--space-bg':`url(${bg})`}} onTouchStart={ts} onTouchEnd={te}>
+<div className="space-layer"/><div className="space-vignette"/>
+<header className="topbar"><button className="brand" onClick={()=>tog('left')}><span className="sigil">△</span><span><b>AETHERION</b><small>Guardian of Knowledge · Ally in Evolution</small></span></button><div className="live-pill"><i/> LIVE PROBE FEED · EYE OF AETHERION</div><div className="top-actions"><button>⌕</button><button>⌁</button><button>♧</button><button>⚙</button><button className="avatar" onClick={onLogout}>SK</button></div></header>
+<button className="edge edge-left" onClick={()=>tog('left')}>›</button><button className="edge edge-right" onClick={()=>tog('right')}>‹</button>
+<aside className={`drawer drawer-left ${o.left?'is-open':''}`}><div className="drawer-head"><div className="logo-lockup"><span className="sigil big">△</span><div><b>AETHERION</b><small>Beyond intelligence.<br/>Beyond limits.</small></div></div></div><nav>{nav.map(([i,l,to,b])=>to==='#'?<button key={l} className="nav-row"><span>{i}</span>{l}{b&&<em>{b}</em>}</button>:<Link key={l} to={to} className="nav-row"><span>{i}</span>{l}{b&&<em>{b}</em>}</Link>)}</nav><div className="drawer-status"><b>AETHERION v7.0.0</b><span><i/> ALL SYSTEMS NOMINAL</span><p>Governance. Alignment. Evolution.</p></div></aside>
+<aside className={`drawer drawer-right ${o.right?'is-open':''}`}><Panel title="SUPREME COUNCIL"><div className="subtle">7 MEMBERS · ALL SYSTEMS NOMINAL</div><div className="judges">{judges.map((j,i)=><div className="judge" key={j}><span className="judge-orb">✦</span><b>{j}</b><small>{['Strategist','Wisdom Keeper','Ethics Guardian','Risk Assessor','Truth Seeker','Innovator','Harmony Keeper'][i]}</small></div>)}</div><Link className="panel-action" to="/legacy/council">View Council Chamber →</Link></Panel><Panel title="JUROR MONITOR"><div className="juror"><span className="radar">◎</span><div><b>STATUS: <i>ACTIVE</i></b><p>Monitoring council decisions and system integrity in real-time.</p></div></div><button className="panel-action">Open Juror Feed →</button></Panel><Panel title="SYSTEM METRICS">{[['PROCESSING POWER','88%'],['MEMORY CORE','73%'],['KNOWLEDGE NEXUS','91%'],['ALIGNMENT INDEX','95%'],['SYSTEM INTEGRITY','97%']].map(([k,v])=><div className="metric" key={k}><div><span>{k}</span><b>{v}</b></div><i><u style={{width:v}}/></i></div>)}</Panel></aside>
+<main className="hero"><div className="coordinates">X: 128.47 · Y: 64.21 · Z: -312.79</div><div className="hero-copy"><div className="eyebrow">AETHERION INTELLIGENCE SYSTEM</div><h1>A E T H E R I O N</h1><p>Guardian of Knowledge. Partner in Discovery. Ally in Evolution.</p><div className="hero-line">◇</div><span className="hero-status">SYSTEM STATUS <i/> ONLINE</span></div><div className="floating-chat"><div className="chat-icon">✦</div><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setQ('')} placeholder="Ask Aetherion anything..."/><button onClick={()=>setQ('')}>↗</button></div><div className="probe-footer"><span>◇ PROBE VIEW · FRONT CAM <i/> LIVE</span><span>DISTANCE TRAVELED · 12.43 LIGHT YEARS</span></div></main>
+<div className={`bottom-dock ${o.bottom?'is-open':''}`}><div className="dock-tabs"><button className="dock-grip" onClick={()=>tog('bottom')}>⌃</button><div><b>CORE SYSTEMS</b><small>Live operational surface</small></div><div className="dock-stats"><span>{s.total||67}<small>AI AGENTS</small></span><span>{((s.approval_rate||1)*100).toFixed(0)}%<small>ALIGNMENT</small></span><span>{((s.avg_score||.987)*100).toFixed(1)}<small>COUNCIL SCORE</small></span></div></div><div className="dock-content"><div className="module-grid">{[['⌬','AI AGENTS','67 specialized agents working in harmony.'],['◌','KNOWLEDGE NEXUS','Structured knowledge across domains.'],['◎','MEMORY CORE','Secure adaptive system memory.'],['◈','MISSIONS','Objectives, agents and outcomes.'],['▥','ANALYTICS','Real-time insights across systems.']].map(([i,t,d])=><div className="module" key={t}><span>{i}</span><b>{t}</b><p>{d}</p><i>→</i></div>)}</div></div></div><div className="edge-hint">SWIPE EDGES TO REVEAL SYSTEM PANELS</div></div>}
