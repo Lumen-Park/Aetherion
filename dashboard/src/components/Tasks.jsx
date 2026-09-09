@@ -47,19 +47,20 @@ function Tasks() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Task Manager</h2>
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
+      <p className="eyebrow">Execution studio</p><h1 className="page-title">Launch a deliberate task.</h1><p className="page-subtitle mb-8">Choose a workflow, describe the outcome, and follow its governed progress in real time.</p>
+      <div className="panel p-6 md:p-8 mb-6">
+        <div className="mb-5 flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-indigo-400/15 text-indigo-200">↗</span><div><h2 className="font-bold text-white">New request</h2><p className="text-xs text-slate-400">A unique run is created when you launch.</p></div></div>
         <textarea
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
           placeholder="Enter your task goal..."
-          className="w-full p-3 border rounded-lg mb-4"
+          className="field mb-4 min-h-28 resize-y"
           rows="3"
         />
         <select
           value={mode}
           onChange={(e) => setMode(e.target.value)}
-          className="w-full md:w-auto p-3 border rounded-lg mr-4 mb-4"
+          className="field mb-4 w-full md:mr-3 md:w-48"
         >
           <option value="pipeline">Pipeline</option>
           <option value="lab">Experiment</option>
@@ -68,7 +69,7 @@ function Tasks() {
         <button
           onClick={submitTask}
           disabled={loading || !goal}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+          className="btn-primary mb-4"
         >
           {loading ? 'Processing...' : 'Run Task'}
         </button>
@@ -76,23 +77,23 @@ function Tasks() {
 
       {/* Progress Bar */}
       {progress && (
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h3 className="text-xl font-semibold mb-4">Task Progress: {progress.state}</h3>
-          <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
+        <div className="panel p-6 mb-6">
+          <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-semibold text-white">Task progress</h3><span className="rounded-full bg-indigo-400/15 px-3 py-1 text-xs font-bold text-indigo-200">{progress.state}</span></div>
+          <div className="w-full bg-white/10 rounded-full h-2 mb-4 overflow-hidden">
             <div
-              className="bg-indigo-600 h-4 rounded-full transition-all duration-500"
+              className="bg-gradient-to-r from-indigo-500 to-cyan-300 h-2 rounded-full transition-all duration-500"
               style={{ width: `${progress.progress_percent}%` }}
             ></div>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-slate-300">
             Estimated remaining: {Math.round(progress.estimated_remaining)} seconds
           </p>
         </div>
       )}
 
       {status && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-xl font-semibold mb-4">Task Status: {status.status}</h3>
+        <div className="panel p-6">
+          <h3 className="text-xl font-semibold mb-4 text-white">Task status <span className="ml-2 text-sm font-medium text-indigo-200">{status.status}</span></h3>
           {status.council_verdict && (
             <div className="mb-4">
               <p className="font-semibold">
@@ -107,7 +108,7 @@ function Tasks() {
             </div>
           )}
           {status.result && (
-            <pre className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-96">
+            <pre className="bg-slate-950/40 border border-white/5 text-slate-200 p-4 rounded-xl overflow-auto max-h-96 text-xs">
               {status.result}
             </pre>
           )}

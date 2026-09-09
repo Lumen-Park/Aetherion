@@ -1,44 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { councilAPI, tasksAPI } from '../api/client';
-
+import { Link } from 'react-router-dom';
+import { councilAPI } from '../api/client';
+import { ErrorState, LoadingState } from './AsyncState';
 function Dashboard() {
-  const [stats, setStats] = useState({ total: 0, approval_rate: 0, avg_score: 0 });
-  const [recentTasks, setRecentTasks] = useState([]);
-
-  useEffect(() => {
-    councilAPI.stats().then(res => setStats(res.data));
-  }, []);
-
-  return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Dashboard Overview</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-600">Total Tasks</h3>
-          <p className="text-4xl font-bold text-indigo-800">{stats.total}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-600">Approval Rate</h3>
-          <p className="text-4xl font-bold text-indigo-800">{(stats.approval_rate * 100).toFixed(1)}%</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-600">Average Score</h3>
-          <p className="text-4xl font-bold text-indigo-800">{stats.avg_score.toFixed(2)}</p>
-        </div>
-      </div>
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>
-        <div className="space-x-4">
-          <button className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
-            New Pipeline Task
-          </button>
-          <button className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700">
-            New Experiment
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+ const [stats, setStats] = useState({ total: 0, approval_rate: 0, avg_score: 0 });
+ const [state, setState] = useState('loading');
+ const loadStats = () => { setState('loading'); councilAPI.stats().then(res => { setStats(res.data); setState('ready'); }).catch(() => setState('error')); };
+ useEffect(loadStats, []);
+ if (state === 'loading') return <LoadingState label="Preparing your command center…" />;
+ if (state === 'error') return <ErrorState message="We couldn't reach council metrics. Check your connection, then retry." onRetry={loadStats} />;
+ const cards = [['Total decisions', stats.total, 'All council verdicts'], ['Approval rate', `${(stats.approval_rate * 100).toFixed(1)}%`, 'Quality signal'], ['Average score', stats.avg_score.toFixed(2), 'Across reviewed work']];
+ return <div><div className="flex flex-col justify-between gap-6 md:flex-row md:items-end"><div><p className="eyebrow">Workspace / live</p><h1 className="page-title">Operate with clarity.</h1><p className="page-subtitle">A focused view of the autonomous work moving through your Aetherion workspace.</p></div><div className="panel flex items-center gap-3 px-4 py-3 text-sm"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400"></span><span className="font-semibold">Systems operational</span></div></div><section className="mt-8 grid gap-4 md:grid-cols-3">{cards.map(([label, value, detail]) => <article key={label} className="stat-card"><p className="text-sm font-semibold text-slate-300">{label}</p><p className="mt-3 text-4xl font-extrabold tracking-tight text-white">{value}</p><p className="mt-2 text-xs text-slate-400">{detail}</p></article>)}</section><section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_.65fr]"><div className="panel p-6 md:p-8"><p className="eyebrow">Start a workflow</p><h2 className="mt-2 text-2xl font-bold text-white">Turn your next idea into momentum.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">Launch a governed pipeline, invite the council to evaluate output, and keep every decision visible.</p><div className="mt-7 flex flex-wrap gap-3"><Link className="btn-primary" to="/tasks">Launch a task <span>→</span></Link><Link className="btn-secondary" to="/council">Open council</Link></div></div><aside className="panel p-6"><p className="eyebrow">Workspace pulse</p><div className="mt-5 space-y-4"><div className="flex items-center justify-between border-b border-white/10 pb-4"><span className="text-sm text-slate-300">Council connection</span><span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-bold text-emerald-300">LIVE</span></div><div className="flex items-center justify-between border-b border-white/10 pb-4"><span className="text-sm text-slate-300">Review confidence</span><span className="text-sm font-bold text-white">{(stats.approval_rate * 100).toFixed(0)}%</span></div><p className="text-xs leading-5 text-slate-400">Metrics refresh automatically as decisions are received.</p></div></aside></section></div>;
 }
-
 export default Dashboard;

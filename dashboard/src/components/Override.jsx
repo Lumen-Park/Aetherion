@@ -24,15 +24,15 @@ function Override() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Admin Override Panel</h2>
-      <div className="bg-white p-6 rounded-lg shadow max-w-2xl">
+      <h2 className="page-title mb-6">Admin Override Panel</h2>
+      <div className="panel p-6 max-w-2xl">
         <form onSubmit={handleOverride}>
           <label className="block mb-2 font-medium">Task ID</label>
           <input
             type="text"
             value={taskId}
             onChange={(e) => setTaskId(e.target.value)}
-            className="w-full p-3 border rounded-lg mb-4"
+            className="field mb-4"
             placeholder="Enter the task ID to override"
             required
           />
@@ -40,7 +40,7 @@ function Override() {
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full p-3 border rounded-lg mb-4"
+            className="field mb-4"
             rows="3"
             placeholder="Justification for the override"
             required
@@ -48,7 +48,7 @@ function Override() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 disabled:opacity-50"
+            className="btn-danger"
           >
             {loading ? 'Processing...' : 'Apply Override'}
           </button>
