@@ -26,7 +26,7 @@
   .btn-danger { @apply btn bg-rose-500/90 text-white hover:bg-rose-400; }
   .stat-card { @apply panel relative overflow-hidden p-5; }
   .stat-card::after { content: ''; position: absolute; width: 110px; height: 110px; border-radius: 999px; right: -32px; top: -42px; background: radial-gradient(circle, rgba(128, 117, 255, .28), transparent 65%); }
-  .nav-link { @apply rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/8 hover:text-white; }
+  .nav-link { @apply rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white; }
   .nav-link-active { @apply bg-white/10 text-white shadow-sm; }
   .cursor-orb { position: fixed; z-index: 100; top: -12px; left: -12px; width: 24px; height: 24px; pointer-events: none; border: 1px solid rgba(156, 218, 255, .8); border-radius: 999px; mix-blend-mode: screen; transition: transform .08s ease-out; box-shadow: 0 0 28px rgba(82, 210, 255, .65), inset 0 0 10px rgba(126, 108, 255, .55); }
 }
