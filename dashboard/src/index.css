@@ -29,7 +29,83 @@
   .nav-link { @apply rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white; }
   .nav-link-active { @apply bg-white/10 text-white shadow-sm; }
   .cursor-orb { position: fixed; z-index: 100; top: -12px; left: -12px; width: 24px; height: 24px; pointer-events: none; border: 1px solid rgba(156, 218, 255, .8); border-radius: 999px; mix-blend-mode: screen; transition: transform .08s ease-out; box-shadow: 0 0 28px rgba(82, 210, 255, .65), inset 0 0 10px rgba(126, 108, 255, .55); }
+
+  .boot-screen { @apply app-shell flex min-h-screen flex-col items-center justify-center px-6 text-center; }
+  .boot-screen h1 { @apply mt-4 text-3xl font-extrabold tracking-tight text-white md:text-4xl; }
+  .boot-orbit { @apply relative mb-8 grid h-28 w-28 place-items-center rounded-full border border-indigo-300/20; box-shadow: 0 0 80px rgba(83, 118, 255, .28); }
+  .boot-orbit::before { content: ''; position: absolute; inset: 14px; border: 1px solid rgba(103, 232, 249, .3); border-radius: 999px; }
+  .boot-orbit b { @apply grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-indigo-300 to-cyan-300 text-xl text-slate-950; }
+  .boot-orbit span { @apply absolute h-2 w-2 rounded-full bg-cyan-300; animation: orbit 2.4s linear infinite; transform-origin: 0 0; }
+  .boot-orbit span:nth-child(2) { animation-delay: -.8s; }
+  .boot-orbit span:nth-child(3) { animation-delay: -1.6s; }
+  .boot-stage { @apply mt-4 font-mono text-sm text-cyan-100/70; }
+  .loading-dots { display: inline-block; width: 28px; overflow: hidden; vertical-align: bottom; animation: dots 1.2s steps(4) infinite; }
+  .boot-progress { @apply mt-6 h-1 w-full max-w-sm overflow-hidden rounded-full bg-white/10; }
+  .boot-progress span { @apply block h-full rounded-full bg-gradient-to-r from-indigo-400 to-cyan-300 transition-all duration-500; }
+  .boot-checks { @apply mt-6 flex flex-col gap-2 text-left text-xs text-slate-500 sm:flex-row; }
+  .boot-checks span { @apply flex items-center gap-2 transition-colors; }
+  .boot-checks span.is-ready { @apply text-slate-300; }
+  .boot-checks i { @apply grid h-5 w-5 place-items-center rounded-full border border-white/10 font-mono not-italic; }
+  .boot-checks .is-ready i { @apply border-cyan-300/30 bg-cyan-300/10 text-cyan-200; }
+
+  .login-shell { @apply grid min-h-screen bg-[#070d19] lg:grid-cols-[1.12fr_.88fr]; }
+  .login-story { @apply relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-white/10 p-10 lg:flex xl:p-14; background: radial-gradient(circle at 20% 15%, rgba(77, 107, 255, .32), transparent 34%), radial-gradient(circle at 80% 80%, rgba(31, 204, 178, .18), transparent 30%), linear-gradient(145deg, #0c1930, #080f1d 70%); }
+  .login-story::before { content: ''; position: absolute; inset: 0; opacity: .24; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 52px 52px; mask-image: radial-gradient(circle at 40% 50%, black, transparent 78%); }
+  .login-story::after { content: ''; position: absolute; width: 420px; height: 420px; right: -160px; top: 18%; border: 1px solid rgba(125, 211, 252, .18); border-radius: 999px; box-shadow: 0 0 0 70px rgba(99,102,241,.04), 0 0 0 140px rgba(99,102,241,.025); animation: breathe 5s ease-in-out infinite; }
+  .brand-lockup { @apply relative z-10 flex items-center gap-3; }
+  .brand-mark { @apply grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-indigo-300 to-cyan-300 text-lg font-black text-slate-950 shadow-xl shadow-indigo-950; }
+  .brand-lockup b { @apply block text-sm tracking-[.16em] text-white; }
+  .brand-lockup small { @apply mt-1 block text-[9px] font-bold uppercase tracking-[.22em] text-slate-400; }
+  .story-copy { @apply relative z-10 max-w-2xl; }
+  .status-pill { @apply mb-8 inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-emerald-200; }
+  .status-pill i { @apply h-1.5 w-1.5 rounded-full bg-emerald-300; box-shadow: 0 0 12px #6ee7b7; }
+  .story-copy h1 { @apply mt-5 text-5xl font-extrabold leading-[1.04] tracking-[-.045em] text-white xl:text-7xl; }
+  .story-copy h1 em { @apply bg-gradient-to-r from-indigo-300 to-cyan-200 bg-clip-text not-italic text-transparent; }
+  .story-copy > p:not(.eyebrow) { @apply mt-7 max-w-xl text-base leading-7 text-slate-300; }
+  .capability-grid { @apply mt-10 grid grid-cols-3 border-y border-white/10 py-6; }
+  .capability-grid div { @apply border-r border-white/10 px-5 first:pl-0 last:border-0; }
+  .capability-grid strong { @apply block text-2xl font-extrabold text-white; }
+  .capability-grid span { @apply mt-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400; }
+  .trust-row { @apply relative z-10 flex flex-wrap gap-7 text-[10px] font-bold uppercase tracking-widest text-slate-500; }
+
+  .login-access { @apply flex min-h-screen flex-col items-center justify-center px-5 py-8 sm:px-10; background: radial-gradient(circle at 80% 10%, rgba(71,85,205,.12), transparent 30%), #080f1c; }
+  .access-card { @apply w-full max-w-[440px]; }
+  .access-heading { @apply mb-8; }
+  .access-heading h2 { @apply mt-2 text-4xl font-extrabold tracking-tight text-white; }
+  .access-heading > p:last-child { @apply mt-2 text-sm text-slate-400; }
+  .access-card form > label, .label-row label { @apply mb-2 block text-xs font-bold uppercase tracking-wider text-slate-300; }
+  .label-row { @apply mt-5 flex items-center justify-between; }
+  .label-row button { @apply mb-2 text-xs font-semibold text-indigo-300 hover:text-cyan-200; }
+  .field-wrap { @apply flex items-center rounded-xl border border-white/10 bg-white/[.035] transition focus-within:border-indigo-400/70 focus-within:bg-indigo-300/[.04] focus-within:ring-4 focus-within:ring-indigo-400/10; }
+  .field-wrap > span { @apply ml-4 text-sm text-slate-500; }
+  .field-wrap input { @apply w-full bg-transparent px-3 py-3.5 text-sm text-white outline-none placeholder:text-slate-600; }
+  .remember { @apply mt-4 flex cursor-pointer items-center gap-2.5 text-xs text-slate-400 normal-case tracking-normal !important; }
+  .remember input { @apply h-4 w-4 rounded border-white/20 bg-slate-900 accent-indigo-500; }
+  .login-submit { @apply mt-5 flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-xl shadow-indigo-950/50 transition hover:-translate-y-0.5 hover:from-indigo-400 hover:to-cyan-500 disabled:cursor-wait disabled:opacity-60; }
+  .login-submit > span:last-child { @apply text-lg; }
+  .button-spinner { @apply h-4 w-4 rounded-full border-2 border-white/30 border-t-white; animation: spin .7s linear infinite; }
+  .login-error { @apply mt-4 flex items-start gap-3 rounded-xl border border-rose-300/20 bg-rose-400/10 p-3 text-xs leading-5 text-rose-100; }
+  .login-error > b { @apply grid h-5 w-5 shrink-0 place-items-center rounded-full bg-rose-400/20; }
+  .login-error > span { @apply flex-1; }
+  .login-error button { @apply text-lg leading-none text-rose-200/70 hover:text-white; }
+  .auth-divider { @apply my-7 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[.15em] text-slate-600 before:h-px before:flex-1 before:bg-white/10 after:h-px after:flex-1 after:bg-white/10; }
+  .provider-list { @apply space-y-2; }
+  .provider-button, .provider-offline { @apply flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[.025] px-4 py-3 text-left text-sm font-semibold capitalize text-slate-200 transition hover:border-indigo-300/30 hover:bg-white/[.06]; }
+  .provider-button b { @apply ml-auto; }
+  .provider-icon { @apply grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-xs font-black text-cyan-200; }
+  .provider-offline { @apply justify-between text-xs text-slate-500; }
+  .provider-offline b { @apply text-indigo-300; }
+  .provider-skeleton { @apply space-y-2; }
+  .provider-skeleton span { @apply block h-12 animate-pulse rounded-xl bg-white/5; }
+  .access-help { @apply mt-7 text-center text-xs text-slate-500; }
+  .access-help a { @apply font-semibold text-indigo-300 hover:text-cyan-200; }
+  .login-access footer { @apply mt-12 flex w-full max-w-[440px] flex-wrap justify-between gap-3 text-[9px] uppercase tracking-wider text-slate-600; }
 }
 
 @keyframes aurora-shift { from { background-position: 0% 20%; } to { background-position: 100% 80%; } }
-@media (prefers-reduced-motion: reduce) { .app-shell { animation: none; } .cursor-orb { display: none; } }
+@keyframes orbit { from { transform: rotate(0deg) translateX(56px); } to { transform: rotate(360deg) translateX(56px); } }
+@keyframes dots { 0% { width: 0; } 100% { width: 28px; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes breathe { 50% { transform: scale(1.06); opacity: .65; } }
+@media (max-width: 1023px) { .login-access { background: radial-gradient(circle at 50% 0%, rgba(73, 90, 210, .22), transparent 38%), #080f1c; } }
+@media (prefers-reduced-motion: reduce) { .app-shell, .boot-orbit span, .login-story::after { animation: none; } .cursor-orb { display: none; } }
