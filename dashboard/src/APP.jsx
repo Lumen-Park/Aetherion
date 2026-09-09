@@ -18,11 +18,17 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [workspaceId, setWorkspaceId] = useState('default');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cursor, setCursor] = useState({ x: -100, y: -100 });
   useEffect(() => { setIsAuthenticated(!!localStorage.getItem('aetherion_token')); setWorkspaceId(localStorage.getItem('aetherion_workspace') || 'default'); }, []);
+  useEffect(() => {
+    const move = (event) => setCursor({ x: event.clientX, y: event.clientY });
+    window.addEventListener('pointermove', move);
+    return () => window.removeEventListener('pointermove', move);
+  }, []);
   const logout = () => { localStorage.removeItem('aetherion_token'); setIsAuthenticated(false); };
   if (!isAuthenticated) return <Login onLogin={(token) => { localStorage.setItem('aetherion_token', token); setIsAuthenticated(true); }} />;
 
-  return <BrowserRouter><div className="app-shell relative">
+  return <BrowserRouter><div className="app-shell relative"><span className="cursor-orb" style={{ transform: `translate3d(${cursor.x}px, ${cursor.y}px, 0)` }} aria-hidden="true" />
     <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/25 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 lg:px-8">
         <NavLink to="/" className="flex items-center gap-3 text-white"><span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-indigo-400 to-cyan-300 text-lg font-black text-slate-950 shadow-lg shadow-indigo-500/20">A</span><span><b className="block text-sm tracking-wide">AETHERION</b><small className="text-[10px] font-bold tracking-[.2em] text-cyan-200/70">COMMAND CENTER</small></span></NavLink>

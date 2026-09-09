@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { tasksAPI } from '../api/client';
+import { GlassCard, Screen, theme } from '../ui/AetherionUI';
 
 export default function Task({ route }) {
   const { taskId, mode } = route.params || {};
@@ -23,8 +24,9 @@ export default function Task({ route }) {
   }, [taskId]);
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Task: {taskId || mode || 'N/A'}</Text>
+    <Screen><ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.eyebrow}>EXECUTION / LIVE</Text><Text style={styles.title}>Task pulse</Text><GlassCard>
+      <Text style={styles.id}>Task: {taskId || mode || 'N/A'}</Text>
       {status ? (
         <>
           <Text>Status: {status.status}</Text>
@@ -37,14 +39,12 @@ export default function Task({ route }) {
         </>
       ) : (
         <Text>Loading...</Text>
-      )}
-    </ScrollView>
+      )}</GlassCard>
+    </ScrollView></Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20 },
-  title: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  verdict: { fontSize: 16, marginVertical: 5 },
-  result: { backgroundColor: '#f0f0f0', padding: 10, marginTop: 10 },
+  container: { paddingVertical: 28 }, eyebrow: { color: theme.cyan, fontWeight: '800', fontSize: 11, letterSpacing: 2, marginHorizontal: 20 }, title: { color: theme.text, fontSize: 30, fontWeight: '800', margin: 20 }, id: { color: theme.muted, marginBottom: 16 },
+  verdict: { fontSize: 16, marginVertical: 5, color: theme.cyan }, result: { backgroundColor: 'rgba(2,10,23,.4)', color: theme.text, padding: 12, marginTop: 14, borderRadius: 12 },
 });
