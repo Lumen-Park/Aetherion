@@ -9,7 +9,7 @@ export const apiClient = axios.create({
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('aetherion_token');
+  const token = localStorage.getItem('aetherion_token') || sessionStorage.getItem('aetherion_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

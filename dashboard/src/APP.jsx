@@ -8,6 +8,7 @@ import Council from './components/Council';
 import Override from './components/Override';
 import Constitution from './components/Constitution';
 import AgentCatalog from './components/AgentCatalog';
+import BootScreen from './components/BootScreen';
 
 const navigation = [
   ['/', 'Overview', '⌘'], ['/agents', 'Agents', '◌'], ['/tasks', 'Launch task', '↗'],
@@ -15,18 +16,37 @@ const navigation = [
 ];
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
   const [workspaceId, setWorkspaceId] = useState('default');
   const [menuOpen, setMenuOpen] = useState(false);
   const [cursor, setCursor] = useState({ x: -100, y: -100 });
-  useEffect(() => { setIsAuthenticated(!!localStorage.getItem('aetherion_token')); setWorkspaceId(localStorage.getItem('aetherion_workspace') || 'default'); }, []);
+  useEffect(() => {
+    const startedAt = Date.now();
+    const restoreSession = () => {
+      setIsAuthenticated(!!(localStorage.getItem('aetherion_token') || sessionStorage.getItem('aetherion_token')));
+      setWorkspaceId(localStorage.getItem('aetherion_workspace') || 'default');
+    };
+    const timer = window.setTimeout(restoreSession, Math.max(0, 1100 - (Date.now() - startedAt)));
+    return () => window.clearTimeout(timer);
+  }, []);
   useEffect(() => {
     const move = (event) => setCursor({ x: event.clientX, y: event.clientY });
     window.addEventListener('pointermove', move);
     return () => window.removeEventListener('pointermove', move);
   }, []);
-  const logout = () => { localStorage.removeItem('aetherion_token'); setIsAuthenticated(false); };
-  if (!isAuthenticated) return <Login onLogin={(token) => { localStorage.setItem('aetherion_token', token); setIsAuthenticated(true); }} />;
+  const logout = () => {
+    localStorage.removeItem('aetherion_token');
+    sessionStorage.removeItem('aetherion_token');
+    setIsAuthenticated(false);
+  };
+  if (isAuthenticated === null) return <BootScreen />;
+  if (!isAuthenticated) return <Login onLogin={({ token, workspace, remember }) => {
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem('aetherion_token', token);
+    localStorage.setItem('aetherion_workspace', workspace);
+    setWorkspaceId(workspace);
+    setIsAuthenticated(true);
+  }} />;
 
   return <BrowserRouter><div className="app-shell relative"><span className="cursor-orb" style={{ transform: `translate3d(${cursor.x}px, ${cursor.y}px, 0)` }} aria-hidden="true" />
     <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/25 backdrop-blur-xl">
