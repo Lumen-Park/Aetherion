@@ -18,30 +18,29 @@ function Agents() {
   );
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Agent Roster ({agents.length} agents)</h2>
-      <div className="flex gap-4 mb-6">
+    <div><p className="eyebrow">Specialist network</p><h1 className="page-title">Agent roster <span className="text-indigo-200">({agents.length})</span></h1><p className="page-subtitle mb-8">Find the right expertise across your active collaborators.</p>
+      <div className="panel flex flex-col gap-3 p-4 mb-6 md:flex-row">
         <input
           type="text"
           placeholder="Search agents..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="flex-1 p-3 border rounded-lg"
+          className="field flex-1"
         />
         <select
           value={collegeFilter}
           onChange={(e) => setCollegeFilter(e.target.value)}
-          className="p-3 border rounded-lg"
+          className="field md:w-52"
         >
           {colleges.map(c => <option key={c}>{c}</option>)}
         </select>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredAgents.map(agent => (
-          <div key={agent.name} className="bg-white p-4 rounded-lg shadow hover:shadow-md transition">
-            <h3 className="font-bold text-lg text-indigo-800">{agent.name}</h3>
-            <p className="text-sm text-gray-600">{agent.college}</p>
-            <p className="text-sm mt-2">{agent.expertise}</p>
+          <div key={agent.name} className="panel p-5 transition duration-200 hover:-translate-y-1 hover:border-indigo-300/30">
+            <span className="mb-4 grid h-9 w-9 place-items-center rounded-xl bg-indigo-400/15 text-indigo-200">◌</span><h3 className="font-bold text-lg text-white">{agent.name}</h3>
+            <p className="mt-1 text-xs font-bold uppercase tracking-wider text-cyan-200/70">{agent.college}</p>
+            <p className="text-sm mt-3 leading-6 text-slate-300">{agent.expertise}</p>
           </div>
         ))}
       </div>

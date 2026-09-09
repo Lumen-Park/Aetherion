@@ -29,23 +29,23 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center mb-6 text-indigo-800">Aetherion Login</h2>
+    <div className="app-shell min-h-screen flex items-center justify-center p-5">
+      <div className="panel w-full max-w-md p-7 md:p-9">
+        <div className="mb-8 text-center"><span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-indigo-400 to-cyan-300 text-xl font-black text-slate-950">A</span><p className="eyebrow">Command center</p><h2 className="mt-2 text-3xl font-extrabold text-white">Welcome back.</h2><p className="mt-2 text-sm text-slate-300">Sign in to your governed workspace.</p></div>
         
         <form onSubmit={handleApiKeyLogin} className="mb-6">
-          <label className="block mb-2 font-medium">API Key</label>
+          <label className="block mb-2 text-sm font-bold text-slate-200">API Key</label>
           <input
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            className="w-full p-3 border rounded-lg mb-4"
+            className="field mb-4"
             placeholder="Enter your API key"
           />
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            className="btn-primary w-full"
           >
             {loading ? 'Logging in...' : 'Login with API Key'}
           </button>
@@ -55,10 +55,10 @@ function Login({ onLogin }) {
           <div>
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+                <div className="w-full border-t border-white/10"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-3 bg-[#111a30] text-slate-400">Or continue with</span>
               </div>
             </div>
             <div className="space-y-2">
@@ -66,7 +66,7 @@ function Login({ onLogin }) {
                 <button
                   key={p}
                   onClick={() => handleOAuthLogin(p)}
-                  className="w-full border border-gray-300 p-3 rounded-lg hover:bg-gray-50 capitalize"
+                  className="btn-secondary w-full capitalize"
                 >
                   {p}
                 </button>
