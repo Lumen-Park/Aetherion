@@ -31,7 +31,7 @@ function AgentCatalog() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Agent Catalog – {workspaceId}</h2>
+      <h2 className="page-title mb-6">Agent Catalog – {workspaceId}</h2>
       <p className="text-gray-600 mb-6">Enable or disable domain experts for this workspace.</p>
 
       <div className="flex gap-4 mb-6">
@@ -40,12 +40,12 @@ function AgentCatalog() {
           placeholder="Search agents..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 p-3 border rounded-lg"
+          className="flex-1 field"
         />
         <select
           value={collegeFilter}
           onChange={(e) => setCollegeFilter(e.target.value)}
-          className="p-3 border rounded-lg"
+          className="field"
         >
           {colleges.map(c => <option key={c}>{c}</option>)}
         </select>
@@ -53,7 +53,7 @@ function AgentCatalog() {
 
       <div className="space-y-2">
         {filtered.map(agent => (
-          <div key={agent.name} className="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+          <div key={agent.name} className="panel p-4 flex items-center justify-between">
             <div>
               <h3 className="font-bold">{agent.name}</h3>
               <p className="text-sm text-gray-600">{agent.college} – {agent.expertise}</p>

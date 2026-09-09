@@ -1,36 +1,12 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { Text, TextInput, Pressable, StyleSheet, Alert, View } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authAPI } from '../api/client';
+import { GlassCard, Screen, theme } from '../ui/AetherionUI';
 
 export default function LoginScreen({ onLogin }) {
-  const [apiKey, setApiKey] = useState('');
-
-  const handleLogin = async () => {
-    try {
-      const res = await authAPI.login(apiKey);
-      await SecureStore.setItemAsync('aetherion_token', res.data.access_token);
-      onLogin();
-    } catch (e) {
-      Alert.alert('Error', 'Invalid API key or server unreachable');
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      <TextInput
-        placeholder="Enter API Key"
-        value={apiKey}
-        onChangeText={setApiKey}
-        secureTextEntry
-        style={styles.input}
-      />
-      <Button title="Login" onPress={handleLogin} />
-    </View>
-  );
+  const [apiKey, setApiKey] = useState(''); const [loading, setLoading] = useState(false);
+  const handleLogin = async () => { setLoading(true); try { const res = await authAPI.login(apiKey); await SecureStore.setItemAsync('aetherion_token', res.data.access_token); onLogin(); } catch { Alert.alert('Unable to sign in', 'Check your API key and connection, then try again.'); } finally { setLoading(false); } };
+  return <Screen><View style={styles.content}><View style={styles.mark}><Text style={styles.markText}>A</Text></View><Text style={styles.eyebrow}>AETHERION / MOBILE</Text><Text style={styles.title}>Your command{`\n`}center, in motion.</Text><Text style={styles.copy}>A focused workspace for governed autonomous work.</Text><GlassCard style={styles.card}><Text style={styles.label}>API KEY</Text><TextInput value={apiKey} onChangeText={setApiKey} secureTextEntry autoCapitalize="none" placeholder="Enter your API key" placeholderTextColor="#74829e" style={styles.input} /><Pressable onPress={handleLogin} disabled={loading || !apiKey} style={({ pressed }) => [styles.button, pressed && styles.pressed, (!apiKey || loading) && styles.disabled]}><Text style={styles.buttonText}>{loading ? 'CONNECTING…' : 'ENTER COMMAND CENTER  →'}</Text></Pressable></GlassCard></View></Screen>;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  input: { borderWidth: 1, padding: 10, marginVertical: 10, borderRadius: 5 },
-});
+const styles = StyleSheet.create({ content: { flex: 1, justifyContent: 'center', padding: 20 }, mark: { width: 58, height: 58, borderRadius: 19, backgroundColor: theme.cyan, justifyContent: 'center', alignItems: 'center', marginBottom: 28, shadowColor: theme.indigo, shadowOpacity: .7, shadowRadius: 20, elevation: 8 }, markText: { color: theme.bg, fontSize: 28, fontWeight: '900' }, eyebrow: { color: theme.cyan, fontSize: 11, fontWeight: '800', letterSpacing: 2 }, title: { color: theme.text, fontSize: 34, lineHeight: 40, fontWeight: '800', marginTop: 10 }, copy: { color: theme.muted, fontSize: 15, lineHeight: 23, marginTop: 12, marginBottom: 28 }, card: { marginHorizontal: 0 }, label: { color: '#cbd7f0', fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginBottom: 9 }, input: { color: theme.text, borderColor: theme.line, borderWidth: 1, backgroundColor: 'rgba(2,10,23,.34)', padding: 15, borderRadius: 14, fontSize: 15 }, button: { marginTop: 14, padding: 16, backgroundColor: theme.indigo, borderRadius: 14, alignItems: 'center' }, buttonText: { color: '#fff', fontWeight: '800', fontSize: 12, letterSpacing: .5 }, pressed: { transform: [{ scale: .98 }], opacity: .85 }, disabled: { opacity: .45 } });

@@ -1,40 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { ScrollView, Text, TextInput, Pressable, StyleSheet, Alert, View } from 'react-native';
 import { tasksAPI } from '../api/client';
-
-export default function Dashboard({ navigation }) {
-  const [goal, setGoal] = useState('');
-
-  const submitTask = async () => {
-    const key = `${Date.now()}-${Math.random().toString(36)}`;
-    try {
-      const res = await tasksAPI.runPipeline(goal, key);
-      navigation.navigate('Task', { taskId: res.data.task_id });
-    } catch (e) {
-      Alert.alert('Error', e.message);
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      <TextInput
-        placeholder="Enter research goal..."
-        value={goal}
-        onChangeText={setGoal}
-        multiline
-        style={styles.input}
-      />
-      <Button title="Run Pipeline" onPress={submitTask} />
-      <View style={{ marginVertical: 10 }} />
-      <Button
-        title="Experiment Mode"
-        onPress={() => navigation.navigate('Task', { taskId: null, mode: 'lab' })}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { padding: 20 },
-  input: { borderWidth: 1, padding: 10, marginVertical: 10, borderRadius: 5, height: 100 },
-});
+import { GlassCard, Screen, theme } from '../ui/AetherionUI';
+export default function Dashboard({ navigation }) { const [goal, setGoal] = useState(''); const submitTask = async () => { try { const key = `${Date.now()}-${Math.random().toString(36)}`; const res = await tasksAPI.runPipeline(goal, 'pipeline', key); navigation.navigate('Task', { taskId: res.data.task_id }); } catch (e) { Alert.alert('Unable to launch', e.message); } }; return <Screen><ScrollView contentContainerStyle={styles.content}><Text style={styles.eyebrow}>WORKSPACE / LIVE</Text><Text style={styles.title}>Make the next{`\n`}move with clarity.</Text><Text style={styles.copy}>Launch governed work and keep the council close to every decision.</Text><GlassCard style={styles.card}><View style={styles.cardTop}><View style={styles.icon}><Text>↗</Text></View><View><Text style={styles.cardTitle}>New request</Text><Text style={styles.hint}>Describe the outcome you want.</Text></View></View><TextInput value={goal} onChangeText={setGoal} multiline placeholder="Enter your research or execution goal…" placeholderTextColor="#74829e" style={styles.input} /><Pressable onPress={submitTask} disabled={!goal} style={({ pressed }) => [styles.button, !goal && styles.disabled, pressed && styles.pressed]}><Text style={styles.buttonText}>LAUNCH PIPELINE  →</Text></Pressable></GlassCard><View style={styles.row}><Pressable onPress={() => navigation.navigate('Agents')} style={styles.quick}><Text style={styles.quickIcon}>◌</Text><Text style={styles.quickText}>Agents</Text></Pressable><Pressable onPress={() => navigation.navigate('Council')} style={styles.quick}><Text style={styles.quickIcon}>◇</Text><Text style={styles.quickText}>Council</Text></Pressable></View></ScrollView></Screen>; }
+const styles = StyleSheet.create({ content: { paddingVertical: 35 }, eyebrow: { color: theme.cyan, fontSize: 11, fontWeight: '800', letterSpacing: 2, marginHorizontal: 20 }, title: { color: theme.text, fontSize: 32, lineHeight: 39, fontWeight: '800', margin: 20, marginBottom: 8 }, copy: { color: theme.muted, marginHorizontal: 20, lineHeight: 22, marginBottom: 22 }, card: {}, cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 }, icon: { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(130,121,255,.24)', marginRight: 12 }, cardTitle: { color: theme.text, fontWeight: '800', fontSize: 16 }, hint: { color: theme.muted, fontSize: 12, marginTop: 2 }, input: { minHeight: 112, color: theme.text, borderColor: theme.line, borderWidth: 1, backgroundColor: 'rgba(2,10,23,.34)', padding: 14, borderRadius: 14, textAlignVertical: 'top' }, button: { marginTop: 14, padding: 16, borderRadius: 14, backgroundColor: theme.indigo, alignItems: 'center' }, buttonText: { color: '#fff', fontWeight: '800', fontSize: 12, letterSpacing: .5 }, disabled: { opacity: .4 }, pressed: { transform: [{ scale: .98 }] }, row: { flexDirection: 'row', marginHorizontal: 20, marginTop: 15, gap: 12 }, quick: { flex: 1, padding: 18, borderRadius: 20, backgroundColor: 'rgba(255,255,255,.06)', borderWidth: 1, borderColor: theme.line }, quickIcon: { color: theme.cyan, fontSize: 18 }, quickText: { color: theme.text, fontWeight: '700', marginTop: 8 } });

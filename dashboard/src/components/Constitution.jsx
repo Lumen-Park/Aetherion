@@ -89,7 +89,7 @@ function Constitution() {
         {/* Left column: Editor */}
         <div>
           {/* Thresholds */}
-          <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <div className="panel p-6 mb-6">
             <h3 className="text-xl font-semibold mb-4">Voting Thresholds</h3>
             <div className="grid grid-cols-2 gap-6">
               <div>
@@ -124,7 +124,7 @@ function Constitution() {
           {/* Judges */}
           <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
             {Object.entries(constitution.judges).map(([name, config]) => (
-              <div key={name} className="bg-white p-6 rounded-lg shadow">
+              <div key={name} className="panel p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-semibold">{name}</h3>
                   <label className="flex items-center">
@@ -141,7 +141,7 @@ function Constitution() {
                   value={config.prompt || ''}
                   onChange={(e) => updateJudge(name, 'prompt', e.target.value)}
                   rows="4"
-                  className="w-full p-3 border rounded-lg font-mono text-sm"
+                  className="field font-mono text-sm"
                   disabled={!config.enabled}
                 />
               </div>
@@ -158,7 +158,7 @@ function Constitution() {
             <button
               onClick={handleSave}
               disabled={loading}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="btn-primary"
             >
               {loading ? 'Saving...' : 'Save Constitution'}
             </button>
@@ -174,7 +174,7 @@ function Constitution() {
               {showAudit ? 'Hide' : 'Show'} Audit History ({auditLog.length} changes)
             </button>
             {showAudit && (
-              <div className="mt-4 bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto text-sm">
+              <div className="mt-4 bg-slate-950/30 border border-white/10 p-4 rounded-xl text-slate-200 max-h-64 overflow-y-auto text-sm">
                 {auditLog.map((entry, i) => (
                   <div key={i} className="border-b py-2">
                     <p className="font-semibold">{new Date(entry.timestamp * 1000).toLocaleString()}</p>
@@ -188,14 +188,14 @@ function Constitution() {
 
         {/* Right column: Live Preview */}
         <div>
-          <div className="bg-white p-6 rounded-lg shadow">
+          <div className="panel p-6">
             <h3 className="text-xl font-semibold mb-4">Live Preview</h3>
             <label className="block mb-2">Sample Output</label>
             <textarea
               value={preview.output}
               onChange={(e) => setPreview({ ...preview, output: e.target.value })}
               rows="4"
-              className="w-full p-3 border rounded-lg mb-4"
+              className="field mb-4"
               placeholder="Paste an example AI output..."
             />
             <label className="block mb-2">Original Goal</label>
@@ -203,13 +203,13 @@ function Constitution() {
               type="text"
               value={preview.goal}
               onChange={(e) => setPreview({ ...preview, goal: e.target.value })}
-              className="w-full p-3 border rounded-lg mb-4"
+              className="field mb-4"
               placeholder="e.g., Write a secure login function"
             />
             <button
               onClick={handlePreview}
               disabled={previewLoading || !preview.output || !preview.goal}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 w-full"
+              className="btn-primary w-full"
             >
               {previewLoading ? 'Running...' : 'Run Preview'}
             </button>
