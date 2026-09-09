@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { councilAPI, connectDeliberationSocket } from '../api/client';
+import { ErrorState, LoadingState } from './AsyncState';
 
 function Council() {
   const [stats, setStats] = useState({ total: 0, approval_rate: 0, avg_score: 0 });
   const [judges, setJudges] = useState([]);
   const [liveVotes, setLiveVotes] = useState([]);
+  const [state, setState] = useState('loading');
   const wsRef = useRef(null);
 
   useEffect(() => {
-    councilAPI.stats().then(res => setStats(res.data));
-    councilAPI.judges().then(res => setJudges(res.data.judges));
+    Promise.all([councilAPI.stats(), councilAPI.judges()]).then(([statsRes, judgesRes]) => { setStats(statsRes.data); setJudges(judgesRes.data.judges); setState('ready'); }).catch(() => setState('error'));
 
     wsRef.current = connectDeliberationSocket((data) => {
       if (data.type === 'vote') {
@@ -19,6 +20,9 @@ function Council() {
 
     return () => wsRef.current?.close();
   }, []);
+
+  if (state === 'loading') return <LoadingState label="Connecting to the council…" />;
+  if (state === 'error') return <ErrorState message="We couldn't load council data. Refresh the page to reconnect." />;
 
   return (
     <div>

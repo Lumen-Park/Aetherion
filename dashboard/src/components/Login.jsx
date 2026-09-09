@@ -5,19 +5,20 @@ function Login({ onLogin }) {
   const [providers, setProviders] = useState([]);
   const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    authAPI.providers().then(res => setProviders(res.data.providers));
+    authAPI.providers().then(res => setProviders(res.data.providers)).catch(() => setProviders([]));
   }, []);
 
   const handleApiKeyLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setLoading(true); setError('');
     try {
       const res = await authAPI.login({ api_key: apiKey });
       onLogin(res.data.access_token);
     } catch (err) {
-      alert('Invalid API key');
+      setError('We couldn’t verify that API key. Check it and try again.');
     } finally {
       setLoading(false);
     }
@@ -42,7 +43,7 @@ function Login({ onLogin }) {
             className="field mb-4"
             placeholder="Enter your API key"
           />
-          <button
+          {error && <p className="mb-4 rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-sm text-rose-100" role="alert">{error}</p>}<button
             type="submit"
             disabled={loading}
             className="btn-primary w-full"

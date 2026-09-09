@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from './src/screens/Login';
@@ -13,6 +15,10 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [isAuth, setIsAuth] = useState(false);
+  const [booting, setBooting] = useState(true);
+  useEffect(() => { SecureStore.getItemAsync('aetherion_token').then((token) => setIsAuth(Boolean(token))).finally(() => setBooting(false)); }, []);
+
+  if (booting) return <View style={{ flex: 1, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center', gap: 14 }}><ActivityIndicator color={theme.cyan} /><Text style={{ color: theme.muted, fontWeight: '700' }}>Preparing workspace…</Text></View>;
 
   return (
     <NavigationContainer>
