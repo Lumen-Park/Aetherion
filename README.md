@@ -168,6 +168,18 @@ The Aetherion web dashboard is built with **React + Vite** and pre‑compiled in
 
 If you want to modify the dashboard or build it from source, follow these steps:
 
+For a live development server, install the dependencies and start Vite:
+
+```bash
+cd dashboard
+npm ci
+npm run dev
+```
+
+Then open http://127.0.0.1:5173. The development server listens on all network
+interfaces so it is also reachable from a container or remote development
+environment. Keep the command running while using the dashboard.
+
 ### 1. Build the Dashboard Locally
 
 ```bash
