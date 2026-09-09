@@ -1,3 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { margin: 0; min-width: 320px; font-family: 'Manrope', sans-serif; color: #e9efff; background: #07111f; cursor: crosshair; }
+  button, input, select, textarea { font: inherit; }
+  ::selection { background: rgba(112, 100, 255, .48); }
+}
+
+@layer components {
+  .app-shell { min-height: 100vh; overflow: hidden; background: radial-gradient(circle at 10% 0%, rgba(83, 118, 255, .25), transparent 30%), radial-gradient(circle at 85% 16%, rgba(48, 211, 172, .16), transparent 26%), linear-gradient(135deg, #081322 0%, #10152b 55%, #07171c 100%); background-size: 160% 160%; animation: aurora-shift 18s ease-in-out infinite alternate; }
+  .app-shell::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .22; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 48px 48px; mask-image: linear-gradient(to bottom, black, transparent 70%); }
+  .glass { background: linear-gradient(135deg, rgba(26, 39, 65, .76), rgba(14, 25, 47, .58)); border: 1px solid rgba(180, 205, 255, .14); box-shadow: 0 20px 60px rgba(0, 0, 0, .2), inset 0 1px rgba(255,255,255,.06); backdrop-filter: blur(20px); transform-style: preserve-3d; }
+  .panel { @apply glass rounded-2xl; }
+  .eyebrow { @apply text-xs font-bold uppercase tracking-[.18em] text-indigo-200/70; }
+  .page-title { @apply mt-2 text-3xl font-extrabold tracking-tight text-white md:text-4xl; }
+  .page-subtitle { @apply mt-2 max-w-2xl text-sm leading-6 text-slate-300; }
+  .field { @apply w-full rounded-xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/10; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-400/30 disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-indigo-500 text-white shadow-lg shadow-indigo-950/50 hover:-translate-y-0.5 hover:bg-indigo-400; }
+  .btn-secondary { @apply btn border border-white/10 bg-white/5 text-slate-100 hover:bg-white/10; }
+  .btn-danger { @apply btn bg-rose-500/90 text-white hover:bg-rose-400; }
+  .stat-card { @apply panel relative overflow-hidden p-5; }
+  .stat-card::after { content: ''; position: absolute; width: 110px; height: 110px; border-radius: 999px; right: -32px; top: -42px; background: radial-gradient(circle, rgba(128, 117, 255, .28), transparent 65%); }
+  .nav-link { @apply rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white; }
+  .nav-link-active { @apply bg-white/10 text-white shadow-sm; }
+  .cursor-orb { position: fixed; z-index: 100; top: -12px; left: -12px; width: 24px; height: 24px; pointer-events: none; border: 1px solid rgba(156, 218, 255, .8); border-radius: 999px; mix-blend-mode: screen; transition: transform .08s ease-out; box-shadow: 0 0 28px rgba(82, 210, 255, .65), inset 0 0 10px rgba(126, 108, 255, .55); }
+}
+
+@keyframes aurora-shift { from { background-position: 0% 20%; } to { background-position: 100% 80%; } }
+@media (prefers-reduced-motion: reduce) { .app-shell { animation: none; } .cursor-orb { display: none; } }
