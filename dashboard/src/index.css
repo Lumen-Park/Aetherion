@@ -30,6 +30,67 @@
   .nav-link-active { @apply bg-white/10 text-white shadow-sm; }
   .cursor-orb { position: fixed; z-index: 100; top: -12px; left: -12px; width: 24px; height: 24px; pointer-events: none; border: 1px solid rgba(156, 218, 255, .8); border-radius: 999px; mix-blend-mode: screen; transition: transform .08s ease-out; box-shadow: 0 0 28px rgba(82, 210, 255, .65), inset 0 0 10px rgba(126, 108, 255, .55); }
 
+  .command-dashboard { @apply pb-12; }
+  .command-hero { @apply flex flex-col justify-between gap-7 border-b border-white/10 pb-8 md:flex-row md:items-end; }
+  .hero-kicker { @apply mb-4 flex items-center gap-2 text-[10px] font-extrabold tracking-[.18em] text-emerald-300; }
+  .hero-kicker span { @apply h-1.5 w-1.5 rounded-full bg-emerald-300; box-shadow: 0 0 12px #6ee7b7; }
+  .hero-kicker b { @apply text-slate-600; }
+  .command-hero h1 { @apply text-4xl font-extrabold tracking-[-.045em] text-white md:text-5xl; }
+  .command-hero h1 em { @apply bg-gradient-to-r from-indigo-300 to-cyan-200 bg-clip-text not-italic text-transparent; }
+  .command-hero p { @apply mt-3 max-w-2xl text-sm leading-6 text-slate-400; }
+  .hero-actions { @apply flex shrink-0 gap-3; }
+  .icon-button { @apply relative grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-lg text-slate-300 transition hover:bg-white/10; }
+  .notification-dot { @apply absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-rose-400; box-shadow: 0 0 8px #fb7185; }
+  .new-mission { @apply flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-5 text-sm font-extrabold text-white shadow-xl shadow-indigo-950/50 transition hover:-translate-y-0.5 hover:brightness-110; }
+  .new-mission span { @apply text-lg font-normal; }
+  .metric-grid { @apply mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4; }
+  .metric-card { @apply glass relative min-h-[168px] overflow-hidden rounded-2xl p-5 transition duration-300 hover:-translate-y-1 hover:border-white/25; }
+  .metric-card::before { content: ''; position: absolute; inset: auto -30px -50px auto; width: 140px; height: 140px; border-radius: 50%; background: var(--glow); filter: blur(28px); opacity: .18; }
+  .metric-violet { --accent: #a78bfa; --glow: #7c3aed; } .metric-cyan { --accent: #67e8f9; --glow: #0891b2; } .metric-green { --accent: #6ee7b7; --glow: #059669; } .metric-amber { --accent: #fbbf24; --glow: #d97706; }
+  .metric-card-top { @apply flex items-center justify-between; }
+  .metric-icon { @apply grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/[.06] text-sm; color: var(--accent); }
+  .metric-delta { @apply rounded-full bg-white/5 px-2 py-1 text-[10px] font-bold text-slate-400; }
+  .metric-card strong { @apply mt-5 block text-3xl font-extrabold tracking-tight text-white; }
+  .metric-card > p { @apply mt-1 text-xs font-medium text-slate-400; }
+  .mini-bars { @apply absolute bottom-5 right-5 flex h-10 w-24 items-end gap-1 opacity-40; }
+  .mini-bars i { @apply flex-1 rounded-t-sm; background: var(--accent); }
+  .dashboard-grid { @apply mt-6 grid gap-5 lg:grid-cols-[1.45fr_.85fr]; }
+  .command-panel { @apply glass rounded-2xl p-5 md:p-6; }
+  .panel-heading { @apply flex items-start justify-between gap-4; }
+  .panel-label { @apply text-[9px] font-extrabold tracking-[.18em] text-indigo-300/70; }
+  .panel-heading h2, .focus-panel h2 { @apply mt-1 text-lg font-bold tracking-tight text-white; }
+  .panel-heading > a { @apply mt-2 text-xs font-bold text-indigo-300 hover:text-cyan-200; }
+  .range-picker { @apply flex rounded-lg border border-white/10 bg-slate-950/20 p-1; }
+  .range-picker button { @apply rounded-md px-2.5 py-1.5 text-[9px] font-extrabold text-slate-500 transition; }
+  .range-picker button.active { @apply bg-white/10 text-white shadow-sm; }
+  .chart-summary { @apply mt-6 flex items-baseline gap-3; }
+  .chart-summary strong { @apply text-3xl font-extrabold text-white; } .chart-summary span { @apply text-xs text-slate-500; } .chart-summary b { @apply ml-auto text-xs text-emerald-300; }
+  .line-chart { @apply relative mt-4 h-44; }
+  .line-chart svg { @apply absolute inset-x-0 top-0 h-[145px] w-full overflow-visible; }
+  .chart-grid-lines { @apply absolute inset-x-0 top-0 flex h-[140px] flex-col justify-between; }
+  .chart-grid-lines i { @apply block border-t border-dashed border-white/[.07]; }
+  .chart-axis { @apply absolute inset-x-0 bottom-0 flex justify-between text-[8px] font-bold tracking-wider text-slate-600; }
+  .activity-list { @apply mt-5 divide-y divide-white/[.07]; }
+  .activity-item { @apply flex items-center gap-3 py-3 first:pt-0 last:pb-0; }
+  .activity-icon { @apply grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-xs; }
+  .activity-icon.emerald { @apply text-emerald-300; } .activity-icon.indigo { @apply text-indigo-300; } .activity-icon.slate { @apply text-slate-400; }
+  .activity-item > div { @apply min-w-0 flex-1; } .activity-item strong { @apply block truncate text-xs font-bold text-slate-200; } .activity-item p { @apply mt-1 truncate text-[10px] text-slate-500; }
+  .state-pill { @apply rounded-full px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide; } .state-pill.emerald { @apply bg-emerald-400/10 text-emerald-300; } .state-pill.indigo { @apply bg-indigo-400/10 text-indigo-300; } .state-pill.slate { @apply bg-white/5 text-slate-500; }
+  .pipeline-panel { @apply overflow-hidden; }
+  .connection-badge { @apply mt-1 flex items-center gap-2 rounded-full bg-white/5 px-2.5 py-1 text-[9px] font-bold text-slate-400; } .connection-badge i { @apply h-1.5 w-1.5 rounded-full bg-amber-300; } .connection-badge.live i { @apply bg-emerald-300; box-shadow: 0 0 8px #6ee7b7; }
+  .pipeline-flow { @apply mt-8 flex items-center justify-between overflow-x-auto pb-2; }
+  .pipeline-step { @apply flex min-w-[70px] flex-col items-center; }
+  .pipeline-orbit { @apply grid h-12 w-12 place-items-center rounded-full; background: conic-gradient(#8b7cf6 var(--progress), rgba(255,255,255,.07) 0); }
+  .pipeline-orbit::before { content: ''; position: absolute; width: 40px; height: 40px; border-radius: 50%; background: #10192c; }
+  .pipeline-orbit span { @apply relative z-10 text-xs font-bold text-indigo-200; }
+  .pipeline-step strong { @apply mt-3 text-[10px] text-slate-300; } .pipeline-step small { @apply mt-1 text-[9px] text-slate-600; }
+  .pipeline-line { @apply mb-8 h-px min-w-[26px] flex-1 bg-white/10; } .pipeline-line i { @apply block h-px bg-gradient-to-r from-indigo-500 to-cyan-400; }
+  .focus-panel { @apply relative overflow-hidden bg-gradient-to-br from-indigo-500/20 to-cyan-400/[.06]; }
+  .focus-panel::after { content: ''; position: absolute; width: 180px; height: 180px; border: 1px solid rgba(165,180,252,.13); border-radius: 50%; right: -70px; top: -60px; box-shadow: 0 0 0 34px rgba(99,102,241,.025); }
+  .focus-orb { @apply relative z-10 mb-5 grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-indigo-300 to-cyan-300 text-xs font-black text-slate-950; box-shadow: 0 0 30px rgba(129,140,248,.28); }
+  .focus-panel p { @apply relative z-10 mt-3 max-w-xs text-xs leading-5 text-slate-400; }
+  .focus-panel > a { @apply relative z-10 mt-5 inline-flex items-center gap-4 text-xs font-extrabold text-indigo-200 hover:text-cyan-200; }
+
   .boot-screen { @apply app-shell flex min-h-screen flex-col items-center justify-center px-6 text-center; }
   .boot-screen h1 { @apply mt-4 text-3xl font-extrabold tracking-tight text-white md:text-4xl; }
   .boot-orbit { @apply relative mb-8 grid h-28 w-28 place-items-center rounded-full border border-indigo-300/20; box-shadow: 0 0 80px rgba(83, 118, 255, .28); }
