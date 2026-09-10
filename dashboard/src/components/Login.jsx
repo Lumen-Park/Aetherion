@@ -6,6 +6,7 @@ const capabilities = [
 ];
 
 export default function Login({ onLogin }) {
+  const publicDemo = import.meta.env.VITE_PUBLIC_DEMO === 'true';
   const [providers, setProviders] = useState([]);
   const [apiKey, setApiKey] = useState('');
   const [workspace, setWorkspace] = useState(localStorage.getItem('aetherion_workspace') || 'default');
@@ -82,6 +83,7 @@ export default function Login({ onLogin }) {
           {error && <div className="login-error" role="alert"><b>!</b><span>{error}</span><button type="button" onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
           <button type="submit" className="login-submit" disabled={loading}>{loading ? <><span className="button-spinner" />Verifying identity…</> : <>Enter command center <span>→</span></>}</button>
         </form>
+        {publicDemo && <button type="button" className="demo-submit" onClick={() => onLogin({ token: 'public-demo', workspace: 'aetherion-prime', remember: false })}><span>✦</span><span><b>Explore the live demo</b><small>No credentials required</small></span><strong>→</strong></button>}
         <div className="auth-divider"><span>Enterprise identity</span></div>
         <div className="provider-list">
           {providerState === 'loading' && <div className="provider-skeleton"><span /><span /></div>}

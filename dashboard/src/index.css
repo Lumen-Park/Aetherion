@@ -144,6 +144,12 @@
   .remember input { @apply h-4 w-4 rounded border-white/20 bg-slate-900 accent-indigo-500; }
   .login-submit { @apply mt-5 flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-xl shadow-indigo-950/50 transition hover:-translate-y-0.5 hover:from-indigo-400 hover:to-cyan-500 disabled:cursor-wait disabled:opacity-60; }
   .login-submit > span:last-child { @apply text-lg; }
+  .demo-submit { @apply mt-3 flex w-full items-center gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[.06] px-4 py-3 text-left text-cyan-100 transition hover:-translate-y-0.5 hover:border-cyan-300/40 hover:bg-cyan-300/10; }
+  .demo-submit > span:first-child { @apply grid h-8 w-8 place-items-center rounded-lg bg-cyan-300/10 text-cyan-300; }
+  .demo-submit > span:nth-child(2) { @apply flex flex-1 flex-col; }
+  .demo-submit b { @apply text-xs font-extrabold; }
+  .demo-submit small { @apply mt-0.5 text-[9px] text-slate-500; }
+  .demo-submit strong { @apply text-lg; }
   .button-spinner { @apply h-4 w-4 rounded-full border-2 border-white/30 border-t-white; animation: spin .7s linear infinite; }
   .login-error { @apply mt-4 flex items-start gap-3 rounded-xl border border-rose-300/20 bg-rose-400/10 p-3 text-xs leading-5 text-rose-100; }
   .login-error > b { @apply grid h-5 w-5 shrink-0 place-items-center rounded-full bg-rose-400/20; }
