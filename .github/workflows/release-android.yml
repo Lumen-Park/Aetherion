@@ -1,4 +1,3 @@
-```yaml
 name: Build Android APK
 
 on:
@@ -6,34 +5,36 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: aetherion-mobile/package-lock.json
 
       - name: Install dependencies
         working-directory: aetherion-mobile
         run: npm ci
 
-      - name: Login to Expo
-        working-directory: aetherion-mobile
-        run: npx expo login -u ${{ secrets.EXPO_USERNAME }} -p ${{ secrets.EXPO_PASSWORD }}
-
       - name: Build Android APK
         working-directory: aetherion-mobile
-        run: npx eas build --platform android --profile production --non-interactive
+        run: npx eas-cli build --platform android --profile production --non-interactive --wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Download APK from Expo
         run: |
           # Wait for build to finish and get the URL
-          BUILD_URL=$(eas build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.applicationUrl')
+          BUILD_URL=$(cd aetherion-mobile && npx eas-cli build:list --platform android --status finished --limit 1 --json --non-interactive | jq -r '.[0].artifacts.applicationUrl')
+          test -n "$BUILD_URL" && test "$BUILD_URL" != "null"
           curl -L "$BUILD_URL" -o aetherion-android.apk
 
       - name: Upload to GitHub Release

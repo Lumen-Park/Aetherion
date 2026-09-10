@@ -1,4 +1,3 @@
-```yaml
 appId: com.aetherion.desktop
 productName: Aetherion
 copyright: Copyright © 2026 Aetherion Labs
@@ -10,14 +9,14 @@ win:
       arch: [x64]
     - target: portable
       arch: [x64]
-  icon: assets/icon.ico
+  icon: assets/file_0000000087e07207bc07807335a449c6.png
 mac:
   target:
     - target: dmg
       arch: [x64, arm64]
-  icon: assets/icon.icns
+  icon: assets/file_0000000087e07207bc07807335a449c6.png
 linux:
   target:
     - target: AppImage
       arch: [x64]
-  icon: assets/icon.png
+  icon: assets/file_0000000087e07207bc07807335a449c6.png
