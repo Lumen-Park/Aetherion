@@ -1,15 +1,103 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { councilAPI } from '../api/client';
-import { ErrorState, LoadingState } from './AsyncState';
+
+const activity = [
+  { title: 'Research synthesis', meta: 'Strategy agent · 2 min ago', state: 'Completed', tone: 'emerald', icon: '↗' },
+  { title: 'Risk assessment', meta: 'Council review · 8 min ago', state: 'Reviewing', tone: 'indigo', icon: '◇' },
+  { title: 'Market signal scan', meta: 'Intelligence agent · 14 min ago', state: 'Completed', tone: 'emerald', icon: '⌁' },
+  { title: 'Launch narrative', meta: 'Creative pipeline · 21 min ago', state: 'Queued', tone: 'slate', icon: '✦' },
+];
+
+const pipeline = [
+  { label: 'Intake', value: 100 }, { label: 'Reasoning', value: 82 },
+  { label: 'Council', value: 56 }, { label: 'Synthesis', value: 24 },
+];
+
+const Icon = ({ children }) => <span className="metric-icon" aria-hidden="true">{children}</span>;
+
 function Dashboard() {
- const [stats, setStats] = useState({ total: 0, approval_rate: 0, avg_score: 0 });
- const [state, setState] = useState('loading');
- const loadStats = () => { setState('loading'); councilAPI.stats().then(res => { setStats(res.data); setState('ready'); }).catch(() => setState('error')); };
- useEffect(loadStats, []);
- if (state === 'loading') return <LoadingState label="Preparing your command center…" />;
- if (state === 'error') return <ErrorState message="We couldn't reach council metrics. Check your connection, then retry." onRetry={loadStats} />;
- const cards = [['Total decisions', stats.total, 'All council verdicts'], ['Approval rate', `${(stats.approval_rate * 100).toFixed(1)}%`, 'Quality signal'], ['Average score', stats.avg_score.toFixed(2), 'Across reviewed work']];
- return <div><div className="flex flex-col justify-between gap-6 md:flex-row md:items-end"><div><p className="eyebrow">Workspace / live</p><h1 className="page-title">Operate with clarity.</h1><p className="page-subtitle">A focused view of the autonomous work moving through your Aetherion workspace.</p></div><div className="panel flex items-center gap-3 px-4 py-3 text-sm"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400"></span><span className="font-semibold">Systems operational</span></div></div><section className="mt-8 grid gap-4 md:grid-cols-3">{cards.map(([label, value, detail]) => <article key={label} className="stat-card"><p className="text-sm font-semibold text-slate-300">{label}</p><p className="mt-3 text-4xl font-extrabold tracking-tight text-white">{value}</p><p className="mt-2 text-xs text-slate-400">{detail}</p></article>)}</section><section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_.65fr]"><div className="panel p-6 md:p-8"><p className="eyebrow">Start a workflow</p><h2 className="mt-2 text-2xl font-bold text-white">Turn your next idea into momentum.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">Launch a governed pipeline, invite the council to evaluate output, and keep every decision visible.</p><div className="mt-7 flex flex-wrap gap-3"><Link className="btn-primary" to="/tasks">Launch a task <span>→</span></Link><Link className="btn-secondary" to="/council">Open council</Link></div></div><aside className="panel p-6"><p className="eyebrow">Workspace pulse</p><div className="mt-5 space-y-4"><div className="flex items-center justify-between border-b border-white/10 pb-4"><span className="text-sm text-slate-300">Council connection</span><span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-bold text-emerald-300">LIVE</span></div><div className="flex items-center justify-between border-b border-white/10 pb-4"><span className="text-sm text-slate-300">Review confidence</span><span className="text-sm font-bold text-white">{(stats.approval_rate * 100).toFixed(0)}%</span></div><p className="text-xs leading-5 text-slate-400">Metrics refresh automatically as decisions are received.</p></div></aside></section></div>;
+  const [stats, setStats] = useState({ total: 1284, approval_rate: .942, avg_score: 8.7 });
+  const [connection, setConnection] = useState('syncing');
+  const [range, setRange] = useState('7D');
+
+  useEffect(() => {
+    let live = true;
+    councilAPI.stats().then(({ data }) => {
+      if (live) { setStats(data); setConnection('live'); }
+    }).catch(() => { if (live) setConnection('demo'); });
+    return () => { live = false; };
+  }, []);
+
+  const chart = useMemo(() => {
+    const points = range === '24H'
+      ? [36, 42, 38, 54, 61, 58, 74, 70, 81, 78, 88, 92]
+      : range === '30D'
+        ? [22, 30, 27, 41, 38, 49, 46, 62, 58, 69, 76, 72, 84, 91]
+        : [28, 34, 45, 42, 58, 53, 67, 63, 78, 74, 86, 91];
+    return points.map((value, index) => `${(index / (points.length - 1)) * 600},${140 - value}`).join(' ');
+  }, [range]);
+
+  const cards = [
+    { label: 'Active agents', value: '24', delta: '+4 today', icon: '◌', tone: 'violet' },
+    { label: 'Council decisions', value: Number(stats.total || 0).toLocaleString(), delta: '+12.4%', icon: '◇', tone: 'cyan' },
+    { label: 'Approval rate', value: `${((stats.approval_rate || 0) * 100).toFixed(1)}%`, delta: '+2.8%', icon: '✓', tone: 'green' },
+    { label: 'Avg. confidence', value: Number(stats.avg_score || 0).toFixed(1), delta: 'High signal', icon: '⌁', tone: 'amber' },
+  ];
+
+  return <div className="command-dashboard">
+    <section className="command-hero">
+      <div>
+        <div className="hero-kicker"><span /> LIVE WORKSPACE <b>/</b> AETHERION PRIME</div>
+        <h1>Good morning, <em>Operator.</em></h1>
+        <p>Your autonomous workforce is performing at peak capacity. Here is what deserves your attention.</p>
+      </div>
+      <div className="hero-actions">
+        <button className="icon-button" aria-label="Open notifications"><span className="notification-dot" />♧</button>
+        <Link className="new-mission" to="/tasks"><span>＋</span> New mission</Link>
+      </div>
+    </section>
+
+    <section className="metric-grid" aria-label="Workspace metrics">
+      {cards.map((card) => <article className={`metric-card metric-${card.tone}`} key={card.label}>
+        <div className="metric-card-top"><Icon>{card.icon}</Icon><span className="metric-delta">{card.delta}</span></div>
+        <strong>{card.value}</strong><p>{card.label}</p>
+        <div className="mini-bars" aria-hidden="true">{[38,55,46,68,61,78,72,90].map((height, i) => <i key={i} style={{ height: `${height}%` }} />)}</div>
+      </article>)}
+    </section>
+
+    <section className="dashboard-grid">
+      <article className="command-panel performance-panel">
+        <div className="panel-heading"><div><span className="panel-label">PERFORMANCE</span><h2>Mission throughput</h2></div><div className="range-picker">{['24H','7D','30D'].map(item => <button key={item} className={range === item ? 'active' : ''} onClick={() => setRange(item)}>{item}</button>)}</div></div>
+        <div className="chart-summary"><strong>1,842</strong><span>missions completed</span><b>↗ 18.2%</b></div>
+        <div className="line-chart">
+          <div className="chart-grid-lines"><i/><i/><i/><i/></div>
+          <svg viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Mission throughput increased over time">
+            <defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#9b87f5" stopOpacity=".34"/><stop offset="1" stopColor="#9b87f5" stopOpacity="0"/></linearGradient></defs>
+            <polygon points={`0,150 ${chart} 600,150`} fill="url(#chartFill)"/>
+            <polyline points={chart} fill="none" stroke="#ad9bff" strokeWidth="3" vectorEffect="non-scaling-stroke"/>
+          </svg>
+          <div className="chart-axis"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span></div>
+        </div>
+      </article>
+
+      <article className="command-panel activity-panel">
+        <div className="panel-heading"><div><span className="panel-label">SIGNAL STREAM</span><h2>Recent activity</h2></div><Link to="/tasks">View all ↗</Link></div>
+        <div className="activity-list">{activity.map(item => <div className="activity-item" key={item.title}>
+          <span className={`activity-icon ${item.tone}`}>{item.icon}</span><div><strong>{item.title}</strong><p>{item.meta}</p></div><span className={`state-pill ${item.tone}`}>{item.state}</span>
+        </div>)}</div>
+      </article>
+
+      <article className="command-panel pipeline-panel">
+        <div className="panel-heading"><div><span className="panel-label">LIVE PIPELINE</span><h2>Mission architecture</h2></div><span className={`connection-badge ${connection}`}><i />{connection === 'live' ? 'Connected' : connection === 'demo' ? 'Preview data' : 'Syncing'}</span></div>
+        <div className="pipeline-flow">{pipeline.map((step, index) => <React.Fragment key={step.label}><div className="pipeline-step"><div className="pipeline-orbit" style={{ '--progress': `${step.value * 3.6}deg` }}><span>{index + 1}</span></div><strong>{step.label}</strong><small>{step.value}%</small></div>{index < pipeline.length - 1 && <div className="pipeline-line"><i style={{ width: `${Math.min(step.value, pipeline[index + 1].value)}%` }} /></div>}</React.Fragment>)}</div>
+      </article>
+
+      <aside className="command-panel focus-panel">
+        <div className="focus-orb"><span>AI</span></div><span className="panel-label">OPERATOR INSIGHT</span><h2>Focus on the signal.</h2><p>3 high-confidence decisions are ready for your final review.</p><Link to="/council">Review decisions <span>→</span></Link>
+      </aside>
+    </section>
+  </div>;
 }
+
 export default Dashboard;
