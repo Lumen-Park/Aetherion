@@ -6,7 +6,10 @@ constitution storage, and GDPR/CCPA consent.
 import json
 import os
 import time
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
+
+if TYPE_CHECKING:
+    from agents.governance.meta_orchestrator import MetaOrchestrator
 
 # MetaOrchestrator imported locally to avoid circular import
 from core.memory import KnowledgeGraph

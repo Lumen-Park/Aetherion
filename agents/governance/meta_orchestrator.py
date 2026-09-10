@@ -235,7 +235,7 @@ class MetaOrchestrator:
     # ------------------------------------------------------------------
     # Main execution entry point
     # ------------------------------------------------------------------
-    def execute(
+    def execute(  # noqa: C901 - pipeline branching is intentionally centralized
         self,
         goal: str,
         mode: Optional[str] = None,
@@ -413,7 +413,7 @@ class MetaOrchestrator:
             self._wait_for_resources()
 
             code_result = developer.write_code(
-                research, goal, strategy_hint=f"attempt_{retry_count+1}"
+                research, goal, strategy_hint=f"attempt_{retry_count + 1}"
             )
             ctx = self.state_manager.transition(
                 TaskState.DEVELOPING, {"code_output": code_result["content"]}

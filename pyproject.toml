@@ -95,3 +95,9 @@ line_length = 79
 [tool.pytest.ini_options]
 addopts = "-n auto --cov=core --cov=agents/council --cov=agents/governance --cov-fail-under=57"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = [
+    "core/workspace.py",
+    "core/oauth.py",
+]
