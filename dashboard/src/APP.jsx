@@ -9,9 +9,10 @@ import Override from './components/Override';
 import Constitution from './components/Constitution';
 import AgentCatalog from './components/AgentCatalog';
 import BootScreen from './components/BootScreen';
+import Workspace from './components/Workspace';
 
 const navigation = [
-  ['/', 'Overview', '⌘'], ['/agents', 'Agents', '◌'], ['/tasks', 'Launch task', '↗'],
+  ['/', 'Overview', '⌘'], ['/workspace', 'AI Workspace', '✦'], ['/agents', 'Agents', '◌'], ['/tasks', 'Launch task', '↗'],
   ['/council', 'Council', '◇'], ['/override', 'Override', '!'],
 ];
 
@@ -60,7 +61,7 @@ function App() {
         </nav>
       </div>
     </header>
-    <main className="relative mx-auto max-w-7xl px-5 py-10 lg:px-8"><Routes><Route path="/" element={<Dashboard />} /><Route path="/agents" element={<Agents />} /><Route path="/tasks" element={<Tasks />} /><Route path="/council" element={<Council />} /><Route path="/override" element={<Override />} /><Route path="/constitution/:workspaceId" element={<Constitution />} /><Route path="/catalog/:workspaceId" element={<AgentCatalog />} /><Route path="*" element={<Navigate to="/" />} /></Routes></main>
+    <main className="relative mx-auto max-w-7xl px-5 py-10 lg:px-8"><Routes><Route path="/" element={<Dashboard />} /><Route path="/workspace" element={<Workspace />} /><Route path="/agents" element={<Agents />} /><Route path="/tasks" element={<Tasks />} /><Route path="/council" element={<Council />} /><Route path="/override" element={<Override />} /><Route path="/constitution/:workspaceId" element={<Constitution />} /><Route path="/catalog/:workspaceId" element={<AgentCatalog />} /><Route path="*" element={<Navigate to="/" />} /></Routes></main>
   </div></BrowserRouter>;
 }
 export default App;
