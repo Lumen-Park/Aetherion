@@ -14,12 +14,61 @@ const pipeline = [
   { label: 'Council', value: 56 }, { label: 'Synthesis', value: 24 },
 ];
 
+const LOCATION_CACHE_KEY = 'aetherion_region';
+const LOCATION_CACHE_TTL = 6 * 60 * 60 * 1000;
+
+const localHour = (timeZone, date = new Date()) => Number(new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric', hourCycle: 'h23', timeZone,
+}).format(date));
+
+const greetingForHour = (hour) => {
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return "What's up";
+  if (hour >= 17 && hour < 22) return 'Good evening';
+  return 'Good night';
+};
+
+function useRegionalClock() {
+  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const [region, setRegion] = useState({ city: '', timeZone: browserZone, source: 'device' });
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000);
+    let cached;
+    try { cached = JSON.parse(sessionStorage.getItem(LOCATION_CACHE_KEY)); } catch { cached = null; }
+    if (cached?.savedAt > Date.now() - LOCATION_CACHE_TTL) {
+      setRegion({ ...cached, source: 'network' });
+      return () => window.clearInterval(timer);
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 3500);
+    fetch('https://ipwho.is/', { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Region unavailable')))
+      .then((data) => {
+        if (!data.success || !data.timezone?.id) throw new Error('Region unavailable');
+        const next = { city: data.city || data.region || data.country || '', timeZone: data.timezone.id, savedAt: Date.now() };
+        sessionStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(next));
+        setRegion({ ...next, source: 'network' });
+      })
+      .catch(() => {})
+      .finally(() => window.clearTimeout(timeout));
+    return () => { window.clearInterval(timer); window.clearTimeout(timeout); controller.abort(); };
+  }, [browserZone]);
+
+  const hour = localHour(region.timeZone, now);
+  const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: region.timeZone }).format(now);
+  return { greeting: greetingForHour(hour), time, ...region };
+}
+
 const Icon = ({ children }) => <span className="metric-icon" aria-hidden="true">{children}</span>;
 
 function Dashboard() {
   const [stats, setStats] = useState({ total: 1284, approval_rate: .942, avg_score: 8.7 });
   const [connection, setConnection] = useState('syncing');
   const [range, setRange] = useState('7D');
+  const regionalClock = useRegionalClock();
 
   useEffect(() => {
     let live = true;
@@ -49,8 +98,9 @@ function Dashboard() {
     <section className="command-hero">
       <div>
         <div className="hero-kicker"><span /> LIVE WORKSPACE <b>/</b> AETHERION PRIME</div>
-        <h1>Good morning, <em>Operator.</em></h1>
+        <h1><span data-testid="regional-greeting">{regionalClock.greeting},</span> <em>Operator.</em></h1>
         <p>Your autonomous workforce is performing at peak capacity. Here is what deserves your attention.</p>
+        <div className="regional-clock" title={`Timezone: ${regionalClock.timeZone}`}><i>◎</i><span>{regionalClock.city || 'Your local region'}</span><b>·</b><time>{regionalClock.time}</time>{regionalClock.source === 'network' && <small>IP localized</small>}</div>
       </div>
       <div className="hero-actions">
         <button className="icon-button" aria-label="Open notifications"><span className="notification-dot" />♧</button>

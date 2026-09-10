@@ -38,6 +38,11 @@
   .command-hero h1 { @apply text-4xl font-extrabold tracking-[-.045em] text-white md:text-5xl; }
   .command-hero h1 em { @apply bg-gradient-to-r from-indigo-300 to-cyan-200 bg-clip-text not-italic text-transparent; }
   .command-hero p { @apply mt-3 max-w-2xl text-sm leading-6 text-slate-400; }
+  .regional-clock { @apply mt-4 inline-flex items-center gap-2 rounded-full border border-white/[.07] bg-white/[.035] px-3 py-1.5 text-[10px] font-semibold text-slate-400; }
+  .regional-clock i { @apply not-italic text-cyan-300; }
+  .regional-clock b { @apply text-slate-700; }
+  .regional-clock time { @apply text-slate-300; }
+  .regional-clock small { @apply ml-1 rounded-full bg-cyan-300/[.08] px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wider text-cyan-300/70; }
   .hero-actions { @apply flex shrink-0 gap-3; }
   .icon-button { @apply relative grid h-12 w-12 place-items-center rounded-xl border border-white/10 bg-white/5 text-lg text-slate-300 transition hover:bg-white/10; }
   .notification-dot { @apply absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-rose-400; box-shadow: 0 0 8px #fb7185; }
