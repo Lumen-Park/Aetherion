@@ -4,6 +4,8 @@ import pytest
 
 from utils.sandbox import SandboxExecutor
 
+pytestmark = pytest.mark.integration
+
 
 def docker_available():
     """Return True if Docker is installed and running."""

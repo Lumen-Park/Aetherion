@@ -95,6 +95,9 @@ line_length = 79
 [tool.pytest.ini_options]
 addopts = "-n auto --cov=core --cov=agents/council --cov=agents/governance --cov-fail-under=57"
 testpaths = ["tests"]
+markers = [
+    "integration: tests requiring external runtimes, containers, or network access",
+]
 
 [tool.coverage.run]
 omit = [
