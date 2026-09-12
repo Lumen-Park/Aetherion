@@ -571,9 +571,80 @@ def test_text_attachments_are_ingested_without_persisting_content(
                 ],
                 "request_id": str(uuid.uuid4()),
             },
-        ).status_code
+    ).status_code
         == 422
     )
+
+
+def test_allowlisted_research_sources_are_cited_and_persisted(client, monkeypatch):
+    captured = {}
+
+    async def provider(messages):
+        captured["messages"] = messages
+        yield "The source supports this claim [Source: Aetherion guide]."
+
+    async def fetch_sources(urls):
+        assert urls == ["https://docs.example.test/guide"]
+        return (
+            [
+                {
+                    "title": "Aetherion guide",
+                    "url": urls[0],
+                    "content": "A bounded source excerpt.",
+                }
+            ],
+            [
+                {
+                    "id": "web-1",
+                    "url": urls[0],
+                    "domain": "docs.example.test",
+                    "title": "Aetherion guide",
+                    "type": "text/html",
+                    "chars": 25,
+                    "status": "retrieved",
+                }
+            ],
+        )
+
+    monkeypatch.setattr(runtime, "tokens", provider)
+    monkeypatch.setattr(runtime, "fetch_research_sources", fetch_sources)
+    cid = create(client)
+    response = client.post(
+        f"/api/conversations/{cid}/live",
+        headers=headers(),
+        json={
+            "content": "Research this claim.",
+            "mode": "research",
+            "sources": [{"url": "https://docs.example.test/guide"}],
+            "request_id": str(uuid.uuid4()),
+        },
+    )
+    assert response.status_code == 202
+    messages = wait_finished(client, cid)
+    assert messages[0]["metadata"]["research_urls"] == [
+        "https://docs.example.test/guide"
+    ]
+    assert messages[-1]["metadata"]["sources"][-1]["status"] == "retrieved"
+    assert "[Source: Aetherion guide]" in captured["messages"][-1]["content"]
+
+
+def test_research_sources_fail_closed_without_allowlist(client, monkeypatch):
+    monkeypatch.delenv("AETHERION_RESEARCH_ALLOWLIST", raising=False)
+    cid = create(client)
+    response = client.post(
+        f"/api/conversations/{cid}/live",
+        headers=headers(),
+        json={
+            "content": "Research this claim.",
+            "mode": "research",
+            "sources": [{"url": "https://docs.example.test/guide"}],
+            "request_id": str(uuid.uuid4()),
+        },
+    )
+    assert response.status_code == 202
+    result = wait_finished(client, cid)[-1]
+    assert result["metadata"]["status"] == "failed"
+    assert "AETHERION_RESEARCH_ALLOWLIST" in result["content"]
 
 
 def test_cancel_keeps_partial_and_blocks_overlap(client, monkeypatch):

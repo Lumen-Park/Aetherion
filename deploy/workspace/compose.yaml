@@ -12,6 +12,7 @@ services:
       AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Set a random secret of at least 32 characters}
       AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Set an installed Ollama model}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Set a reachable private Ollama URL}
+      AETHERION_RESEARCH_ALLOWLIST: ${AETHERION_RESEARCH_ALLOWLIST:-}
       AETHERION_CONVERSATIONS_DB: /data/conversations.sqlite3
       AETHERION_CORS_ORIGINS: https://${AETHERION_DOMAIN:?Set your domain}
     volumes:

@@ -18,6 +18,7 @@ import {
   Search,
   X,
   ChevronRight,
+  Link,
   Paperclip,
   Pencil,
   Trash2,
@@ -161,6 +162,8 @@ export default function LiveWorkspace() {
     [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState([]),
     [dragging, setDragging] = useState(false);
+  const [researchSources, setResearchSources] = useState([]);
+  const [researchSourceDraft, setResearchSourceDraft] = useState("");
   const [readingAttachments, setReadingAttachments] = useState(false);
   const [mode, setMode] = useState("quick"),
     [notice, setNotice] = useState("");
@@ -624,11 +627,33 @@ export default function LiveWorkspace() {
       setReadingAttachments(false);
     }
   };
+  const addResearchSource = () => {
+    const url = researchSourceDraft.trim();
+    if (!url) return;
+    if (!/^https:\/\/[^/]+/i.test(url)) {
+      setNotice("Research sources must use an HTTPS URL.");
+      return;
+    }
+    if (researchSources.some((source) => source.url === url)) {
+      setNotice("That research source is already added.");
+      return;
+    }
+    if (researchSources.length >= 4) {
+      setNotice("You can add up to four research sources per request.");
+      return;
+    }
+    setResearchSources((current) => [...current, { url }]);
+    setResearchSourceDraft("");
+    setNotice(
+      "Source added. The server will retrieve only allowlisted domains.",
+    );
+  };
   const sendContent = async ({
     content,
     conversationId = active,
     requestMode = mode,
     requestAttachments = [],
+    requestSources = [],
     clearDraft = false,
   }) => {
     if (
@@ -660,12 +685,15 @@ export default function LiveWorkspace() {
           content,
           mode: requestMode,
           attachments: requestAttachments,
+          sources: requestSources,
           request_id: crypto.randomUUID(),
         }),
       });
       if (clearDraft) {
         updateDraft("");
         setAttachments([]);
+        setResearchSources([]);
+        setResearchSourceDraft("");
       }
       await list();
       const chat = await (await request(`/conversations/${id}`)).json();
@@ -683,6 +711,7 @@ export default function LiveWorkspace() {
       conversationId: active,
       requestMode: mode,
       requestAttachments: attachments,
+      requestSources: mode === "research" ? researchSources : [],
       clearDraft: true,
     });
   const retryMessage = (message, index) => {
@@ -698,6 +727,9 @@ export default function LiveWorkspace() {
       content: source.content,
       conversationId: active,
       requestMode: message.metadata?.mode || mode,
+      requestSources: (source.metadata?.research_urls || []).map((url) => ({
+        url,
+      })),
     });
   };
   const branchFrom = async (message, index) => {
@@ -800,6 +832,8 @@ export default function LiveWorkspace() {
     setConfirmingChat(null);
     setActive(null);
     setAttachments([]);
+    setResearchSources([]);
+    setResearchSourceDraft("");
     setAgents([]);
     setCouncil(null);
     setArtifactPanel(null);
@@ -1325,13 +1359,34 @@ export default function LiveWorkspace() {
                   ))}
                 </div>
               )}
+              {message.metadata?.research_urls?.length > 0 && (
+                <div
+                  className="aw-message-research-sources"
+                  aria-label="Research sources"
+                >
+                  <Link size={12} />
+                  <span>Sources requested:</span>
+                  {message.metadata.research_urls.map((url) => (
+                    <a key={url} href={url} target="_blank" rel="noreferrer">
+                      {url}
+                    </a>
+                  ))}
+                </div>
+              )}
               {message.metadata?.sources?.length > 0 && (
                 <section className="aw-source-trace">
                   <div className="aw-source-trace-heading">
                     <span>
-                      <Paperclip size={13} /> Bounded research sources
+                      <Link size={13} />
+                      {message.metadata.sources.some((source) => source.url)
+                        ? "Source trace"
+                        : "Bounded research sources"}
                     </span>
-                    <small>ATTACHMENTS ONLY · NO WEB SEARCH</small>
+                    <small>
+                      {message.metadata.sources.some((source) => source.url)
+                        ? "ALLOWLISTED HTTPS RETRIEVAL"
+                        : "ATTACHMENTS ONLY · NO WEB SEARCH"}
+                    </small>
                   </div>
                   <div className="aw-source-trace-list">
                     {message.metadata.sources.map((source, sourceIndex) => (
@@ -1339,13 +1394,33 @@ export default function LiveWorkspace() {
                         key={`${source.id || source.name}-${sourceIndex}`}
                         className="aw-source-trace-item"
                       >
-                        <Paperclip size={12} />
+                        {source.url ? (
+                          <Link size={12} />
+                        ) : (
+                          <Paperclip size={12} />
+                        )}
                         <div>
-                          <strong>{source.name}</strong>
+                          {source.url ? (
+                            <a
+                              href={source.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <strong>
+                                {source.title || source.domain || source.url}
+                              </strong>
+                            </a>
+                          ) : (
+                            <strong>{source.name}</strong>
+                          )}
                           <small>
-                            {source.text_ingested
-                              ? "Text included in evidence brief"
-                              : "Metadata only · content not ingested"}
+                            {source.url
+                              ? source.status === "retrieved"
+                                ? `${source.chars || 0} characters retrieved`
+                                : source.error || "Source blocked"
+                              : source.text_ingested
+                                ? "Text included in evidence brief"
+                                : "Metadata only · content not ingested"}
                           </small>
                         </div>
                       </div>
@@ -1588,6 +1663,64 @@ export default function LiveWorkspace() {
               ))}
             </div>
           )}
+          {mode === "research" && (
+            <div className="aw-research-sources">
+              <div className="aw-research-sources-heading">
+                <span>
+                  <Link size={13} /> Research sources
+                </span>
+                <small>HTTPS · SERVER ALLOWLISTED</small>
+              </div>
+              {researchSources.length > 0 && (
+                <div
+                  className="aw-research-source-list"
+                  aria-label="Added research sources"
+                >
+                  {researchSources.map((source) => (
+                    <span className="aw-research-source-chip" key={source.url}>
+                      <Link size={11} />
+                      <span title={source.url}>{source.url}</span>
+                      <IconButton
+                        label={`Remove ${source.url}`}
+                        type="button"
+                        onClick={() =>
+                          setResearchSources((current) =>
+                            current.filter((item) => item.url !== source.url),
+                          )
+                        }
+                      >
+                        <X size={11} />
+                      </IconButton>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <form
+                className="aw-research-source-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  addResearchSource();
+                }}
+              >
+                <input
+                  aria-label="Add research source URL"
+                  type="url"
+                  placeholder="https://example.com/source"
+                  value={researchSourceDraft}
+                  onChange={(event) =>
+                    setResearchSourceDraft(event.target.value)
+                  }
+                />
+                <button type="submit" disabled={!researchSourceDraft.trim()}>
+                  Add
+                </button>
+              </form>
+              <small className="aw-research-source-note">
+                Up to four sources. Only domains configured on the server are
+                retrieved.
+              </small>
+            </div>
+          )}
           <textarea
             ref={composer}
             aria-label="Message Aetherion"
@@ -1678,7 +1811,7 @@ export default function LiveWorkspace() {
             >
               <option value="quick">Quick</option>
               <option value="standard">Agent team</option>
-              <option value="research">Deep research · attachments</option>
+              <option value="research">Deep research · bounded sources</option>
               <option value="council">Council review</option>
             </select>
             <IconButton

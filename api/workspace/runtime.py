@@ -1,11 +1,14 @@
 """Bounded live conversation runtime. One process per persistent SQLite volume."""
 import asyncio
+import html
+import ipaddress
 import json
 import math
 import os
 import re
 import time
 import uuid
+from urllib.parse import urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,12 +28,17 @@ class LiveAttachment(BaseModel):
     content: str | None = Field(default=None, max_length=50_000)
 
 
+class LiveSource(BaseModel):
+    url: str = Field(min_length=12, max_length=2048, pattern=r"^https://")
+
+
 class LiveRequest(BaseModel):
     content: str = Field(min_length=1, max_length=16000)
     mode: str = Field(
         default="quick", pattern="^(quick|standard|research|council)$"
     )
     attachments: list[LiveAttachment] = Field(default_factory=list, max_length=8)
+    sources: list[LiveSource] = Field(default_factory=list, max_length=4)
     request_id: uuid.UUID
 
 
@@ -43,6 +51,100 @@ COUNCIL_JUDGES = (
     "Documentation",
     "Aetherion Prime",
 )
+
+MAX_RESEARCH_SOURCE_BYTES = 500_000
+MAX_RESEARCH_SOURCE_CHARS = 30_000
+
+
+def research_allowlist():
+    return tuple(
+        item.strip().lower().lstrip("*.")
+        for item in os.getenv("AETHERION_RESEARCH_ALLOWLIST", "").split(",")
+        if item.strip()
+    )
+
+
+def validate_research_url(url):
+    parsed = urlsplit(url)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if parsed.scheme != "https" or not host:
+        raise RuntimeError("Research sources must use HTTPS URLs.")
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("Research sources must use an allowlisted domain, not an IP address.")
+    domains = research_allowlist()
+    if not domains:
+        raise RuntimeError(
+            "Live web research is not configured. Set AETHERION_RESEARCH_ALLOWLIST."
+        )
+    if not any(host == domain or host.endswith("." + domain) for domain in domains):
+        raise RuntimeError(f"Research domain is not allowlisted: {host}")
+    return parsed, host
+
+
+def extract_source_text(raw, content_type):
+    text = raw.decode("utf-8", errors="replace")
+    title = "Untitled source"
+    if "html" in content_type:
+        title_match = re.search(r"<title[^>]*>(.*?)</title>", text, re.I | re.S)
+        if title_match:
+            title = re.sub(r"\s+", " ", html.unescape(title_match.group(1))).strip()[:180]
+        text = re.sub(r"<script[^>]*>.*?</script>|<style[^>]*>.*?</style>", " ", text, flags=re.I | re.S)
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = html.unescape(text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return title or "Untitled source", text[:MAX_RESEARCH_SOURCE_CHARS]
+
+
+async def fetch_research_sources(urls):
+    if len(urls) > 4:
+        raise RuntimeError("Deep research supports at most four web sources per request.")
+    if not urls:
+        return [], []
+    contexts, metadata = [], []
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(12, connect=4),
+        follow_redirects=False,
+        headers={"User-Agent": "AetherionResearch/1.0"},
+    ) as client:
+        for index, url in enumerate(urls):
+            source = {
+                "id": f"web-{index + 1}",
+                "url": url,
+                "status": "blocked",
+            }
+            try:
+                _, host = validate_research_url(url)
+                response = await client.get(url)
+                if response.status_code < 200 or response.status_code >= 300:
+                    raise RuntimeError(f"Source returned HTTP {response.status_code}.")
+                if len(response.content) > MAX_RESEARCH_SOURCE_BYTES:
+                    raise RuntimeError("Source exceeds the 500 KB retrieval limit.")
+                content_type = response.headers.get("content-type", "text/plain").lower()
+                if not any(kind in content_type for kind in ("text/", "html", "json", "xml")):
+                    raise RuntimeError("Source content type is not readable text.")
+                title, text = extract_source_text(response.content, content_type)
+                if not text:
+                    raise RuntimeError("Source did not contain readable text.")
+                source.update(
+                    {
+                        "domain": host,
+                        "title": title,
+                        "type": content_type.split(";", 1)[0],
+                        "chars": len(text),
+                        "status": "retrieved",
+                    }
+                )
+                contexts.append({"title": title, "url": url, "content": text})
+            except RuntimeError as error:
+                source["error"] = str(error)
+            except httpx.HTTPError:
+                source["error"] = "Source could not be reached."
+            metadata.append(source)
+    return contexts, metadata
 
 
 def initialize():
@@ -198,9 +300,11 @@ async def execute(
     mode,
     attachment_context=None,
     source_metadata=None,
+    source_urls=None,
 ):
     content, status, council, artifact = "", "completed", None, None
-    sources = source_metadata if mode == "research" else []
+    sources = list(source_metadata or []) if mode == "research" else []
+    source_urls = source_urls or []
     try:
         async with asyncio.timeout(420):
             history = store.get(owner, conversation_id)["messages"]
@@ -227,15 +331,58 @@ async def execute(
                     for item in attachment_context
                 ]
                 messages[-1]["content"] += "\n\n" + "\n\n".join(blocks)
+            web_contexts = []
+            if mode == "research" and source_urls:
+                store.emit(
+                    conversation_id,
+                    "agent.started",
+                    {"name": "Research retrieval", "run_id": run_id},
+                )
+                web_contexts, web_sources = await fetch_research_sources(source_urls)
+                sources.extend(web_sources)
+                store.emit(
+                    conversation_id,
+                    "agent.completed",
+                    {
+                        "name": "Research retrieval",
+                        "run_id": run_id,
+                        "sources": len(web_contexts),
+                    },
+                )
+                if not web_contexts:
+                    detail = next(
+                        (
+                            item.get("error")
+                            for item in sources[-len(source_urls) :]
+                            if item.get("error")
+                        ),
+                        "No research sources could be retrieved.",
+                    )
+                    raise RuntimeError(detail)
+                if messages:
+                    blocks = [
+                        f"[Source: {item['title']}]\nURL: {item['url']}\n{item['content']}"
+                        for item in web_contexts
+                    ]
+                    messages[-1]["content"] += "\n\n" + "\n\n".join(blocks)
             system = "You are Aetherion's Chief of Staff. Give a useful, honest answer. You have no tools, web access, or file execution. Never claim to have executed, researched live sources, or received Council approval. Provide concise conclusions and uncertainty, not private deliberation."
             if mode == "research":
-                system = (
-                    "You are Aetherion's evidence analyst. Produce a bounded research brief "
-                    "using only the explicitly attached text in this request. You have no web "
-                    "access, browsing, or external sources. Cite claims with [Source: filename] "
-                    "when supported, distinguish evidence from inference, and say when the "
-                    "attached material is insufficient. Never imply that live research occurred."
-                )
+                if source_urls:
+                    system = (
+                        "You are Aetherion's evidence analyst. Produce a bounded research brief "
+                        "using only the explicitly attached text and retrieved allowlisted sources "
+                        "in this request. Cite supported claims with [Source: title], distinguish "
+                        "evidence from inference, identify disagreement, and say when the sources "
+                        "are insufficient. Do not claim access to any source that is not provided."
+                    )
+                else:
+                    system = (
+                        "You are Aetherion's evidence analyst. Produce a bounded research brief "
+                        "using only the explicitly attached text in this request. You have no web "
+                        "access, browsing, or external sources. Cite claims with [Source: filename] "
+                        "when supported, distinguish evidence from inference, and say when the "
+                        "attached material is insufficient. Never imply that live research occurred."
+                    )
             if mode == "standard":
                 from institution.registry import select, run_specialist
                 for specialist in select(messages[-1]["content"]):
@@ -308,6 +455,8 @@ async def submit(conversation_id: str, request: LiveRequest, user=Depends(requir
     store, owner = get_store(), owner_id(user)
     if not request.content.strip():
         raise HTTPException(422, "Enter a message")
+    if request.sources and request.mode != "research":
+        raise HTTPException(422, "Web sources are available only in Deep research mode.")
     if not store.get(owner, conversation_id):
         raise HTTPException(404, "Conversation not found")
     run_id, message_id = str(request.request_id), str(uuid.uuid4())
@@ -340,13 +489,16 @@ async def submit(conversation_id: str, request: LiveRequest, user=Depends(requir
             }
             for index, item in enumerate(request.attachments)
         ]
+        user_metadata = {"mode": request.mode, "attachments": attachment_metadata}
+        if request.sources:
+            user_metadata["research_urls"] = [item.url for item in request.sources]
         db.execute(
             "INSERT INTO messages VALUES (?, ?, 'user', ?, 'text', ?, ?)",
             (
                 str(uuid.uuid4()),
                 conversation_id,
                 request.content,
-                json.dumps({"mode": request.mode, "attachments": attachment_metadata}),
+                json.dumps(user_metadata),
                 now,
             ),
         )
@@ -363,6 +515,7 @@ async def submit(conversation_id: str, request: LiveRequest, user=Depends(requir
             request.mode,
             text_attachments,
             attachment_metadata,
+            [item.url for item in request.sources],
         )
     )
     return {"id": run_id, "message_id": message_id, "status": "running"}
