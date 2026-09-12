@@ -8,6 +8,10 @@ import {
   Download,
   PanelLeft,
   Copy,
+  RotateCcw,
+  GitBranch,
+  ThumbsUp,
+  ThumbsDown,
   Check,
   ShieldCheck,
   Command,
@@ -56,6 +60,7 @@ export default function LiveWorkspace() {
     [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false),
     [activity, setActivity] = useState([]);
+  const [feedback, setFeedback] = useState({});
   const [agents, setAgents] = useState([]);
   const [council, setCouncil] = useState(null);
   const [drawer, setDrawer] = useState(false),
@@ -269,18 +274,24 @@ export default function LiveWorkspace() {
       })),
     ]);
   };
-  const send = async () => {
-    if (!draft.trim() || submitting.current || busy) return;
+  const sendContent = async ({
+    content,
+    conversationId = active,
+    requestMode = mode,
+    requestAttachments = [],
+    clearDraft = false,
+  }) => {
+    if (!content.trim() || submitting.current || busy) return;
     submitting.current = true;
     setBusy(true);
     setNotice("");
     try {
-      let id = active;
+      let id = conversationId;
       if (!id) {
         const chat = await (
           await request("/conversations", {
             method: "POST",
-            body: JSON.stringify({ title: draft.slice(0, 80) }),
+            body: JSON.stringify({ title: content.slice(0, 80) }),
           })
         ).json();
         id = chat.id;
@@ -289,14 +300,16 @@ export default function LiveWorkspace() {
       await request(`/conversations/${id}/live`, {
         method: "POST",
         body: JSON.stringify({
-          content: draft,
-          mode,
-          attachments,
+          content,
+          mode: requestMode,
+          attachments: requestAttachments,
           request_id: crypto.randomUUID(),
         }),
       });
-      updateDraft("");
-      setAttachments([]);
+      if (clearDraft) {
+        updateDraft("");
+        setAttachments([]);
+      }
       await list();
       const chat = await (await request(`/conversations/${id}`)).json();
       if (selection.current === id) setMessages(chat.messages);
@@ -306,6 +319,72 @@ export default function LiveWorkspace() {
     } finally {
       submitting.current = false;
     }
+  };
+  const send = () =>
+    sendContent({
+      content: draft,
+      conversationId: active,
+      requestMode: mode,
+      requestAttachments: attachments,
+      clearDraft: true,
+    });
+  const retryMessage = (message, index) => {
+    const source = messages
+      .slice(0, index)
+      .reverse()
+      .find((item) => item.role === "user");
+    if (!source) {
+      setNotice("The original prompt for this answer is unavailable.");
+      return;
+    }
+    sendContent({
+      content: source.content,
+      conversationId: active,
+      requestMode: message.metadata?.mode || mode,
+    });
+  };
+  const branchFrom = async (message, index) => {
+    const source = messages
+      .slice(0, index)
+      .reverse()
+      .find((item) => item.role === "user");
+    if (!source) {
+      setNotice("The original prompt for this answer is unavailable.");
+      return;
+    }
+    try {
+      const chat = await (
+        await request("/conversations", {
+          method: "POST",
+          body: JSON.stringify({
+            title:
+              `Branch · ${chats.find((item) => item.id === active)?.title || "Conversation"}`.slice(
+                0,
+                160,
+              ),
+          }),
+        })
+      ).json();
+      const cache = getDraftCache();
+      cache[chat.id] = source.content;
+      writeDraftCache(cache);
+      setActive(chat.id);
+      setDraft(source.content);
+      setAttachments([]);
+      await list();
+      setNotice(
+        "Branch ready. Review the prompt, then send it when you are ready.",
+      );
+      setTimeout(() => composer.current?.focus(), 0);
+    } catch (error) {
+      setNotice(error.message);
+    }
+  };
+  const setMessageFeedback = (messageId, value) => {
+    setFeedback((current) => ({
+      ...current,
+      [messageId]: current[messageId] === value ? null : value,
+    }));
   };
   const stop = async () => {
     if (!active) return;
@@ -529,7 +608,7 @@ export default function LiveWorkspace() {
               </p>
             </div>
           )}
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <article
               key={message.id}
               className="aw-message"
@@ -553,22 +632,6 @@ export default function LiveWorkspace() {
                     </span>
                   ))}
                 </div>
-              )}
-              {message.content && (
-                <IconButton
-                  label="Copy message"
-                  onClick={() =>
-                    navigator.clipboard
-                      .writeText(message.content)
-                      .catch(() =>
-                        setNotice(
-                          "Clipboard unavailable. Select the answer to copy it.",
-                        ),
-                      )
-                  }
-                >
-                  <Copy size={15} />
-                </IconButton>
               )}
               {message.metadata?.council && (
                 <section className="aw-council-card aw-live-council-card">
@@ -613,6 +676,63 @@ export default function LiveWorkspace() {
                     ))}
                   </div>
                 </section>
+              )}
+              {message.content && (
+                <div
+                  className="aw-answer-actions"
+                  role="toolbar"
+                  aria-label={`${message.role === "assistant" ? "Answer" : "Message"} actions`}
+                >
+                  <IconButton
+                    label="Copy message"
+                    onClick={() =>
+                      navigator.clipboard
+                        .writeText(message.content)
+                        .then(() => setNotice("Copied to clipboard."))
+                        .catch(() =>
+                          setNotice(
+                            "Clipboard unavailable. Select the message to copy it.",
+                          ),
+                        )
+                    }
+                  >
+                    <Copy size={14} />
+                  </IconButton>
+                  {message.role === "assistant" &&
+                    message.metadata?.status !== "running" && (
+                      <>
+                        <IconButton
+                          label="Retry response"
+                          onClick={() => retryMessage(message, index)}
+                          disabled={busy}
+                        >
+                          <RotateCcw size={14} />
+                        </IconButton>
+                        <IconButton
+                          label="Branch from response"
+                          onClick={() => branchFrom(message, index)}
+                          disabled={busy}
+                        >
+                          <GitBranch size={14} />
+                        </IconButton>
+                        <span />
+                        <IconButton
+                          label="Helpful"
+                          aria-pressed={feedback[message.id] === "up"}
+                          onClick={() => setMessageFeedback(message.id, "up")}
+                        >
+                          <ThumbsUp size={14} />
+                        </IconButton>
+                        <IconButton
+                          label="Not helpful"
+                          aria-pressed={feedback[message.id] === "down"}
+                          onClick={() => setMessageFeedback(message.id, "down")}
+                        >
+                          <ThumbsDown size={14} />
+                        </IconButton>
+                      </>
+                    )}
+                </div>
               )}
             </article>
           ))}
