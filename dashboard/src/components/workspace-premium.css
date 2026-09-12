@@ -1251,6 +1251,48 @@
   color: #8f9b89;
   font-size: 8px;
 }
+.aw-live-activity {
+  display: grid;
+  grid-template-columns: minmax(240px, 330px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 8px 24px 12px;
+}
+.aw-live-activity > .aw-constellation {
+  min-height: 190px;
+  margin: 0;
+}
+.aw-live-activity > .aw-constellation canvas {
+  height: 190px;
+}
+.aw-live-activity > details {
+  min-width: 0;
+  max-height: 190px;
+  overflow: auto;
+  padding: 10px 13px;
+  border: 1px solid #b8bd921c;
+  border-radius: 9px;
+  background: #b8bd9208;
+  color: #a5b099;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.aw-live-activity > details summary {
+  cursor: pointer;
+  color: #c9c9b4;
+  font-size: 10px;
+}
+.aw-live-activity > details p {
+  margin: 8px 0 0;
+  color: #929e8c;
+  font-size: 9px;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  .aw-live-activity {
+    grid-template-columns: 1fr;
+  }
+}
 .aw-timeline {
   display: flex;
   gap: 12px;

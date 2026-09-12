@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
+import AgentConstellation from "./AgentConstellation";
 import VoiceControls from "./VoiceControls";
 import { IconButton, download } from "./WorkspaceParts";
 import "./workspace-premium.css";
@@ -25,6 +26,7 @@ export default function LiveWorkspace() {
     [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false),
     [activity, setActivity] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [council, setCouncil] = useState(null);
   const [drawer, setDrawer] = useState(false),
     [connected, setConnected] = useState(false);
@@ -68,6 +70,7 @@ export default function LiveWorkspace() {
     if (!active) {
       setMessages([]);
       setActivity([]);
+      setAgents([]);
       setCouncil(null);
       setBusy(false);
       return;
@@ -76,6 +79,7 @@ export default function LiveWorkspace() {
     let cursor = 0;
     setMessages([]);
     setActivity([]);
+    setAgents([]);
     setCouncil(null);
     setDraft("");
     const sync = async () => {
@@ -127,6 +131,27 @@ export default function LiveWorkspace() {
                   ...items.slice(-19),
                   `${data.name}: ${event[1].endsWith("started") ? "working" : "finished"}`,
                 ]);
+              if (
+                event[1] === "agent.started" ||
+                event[1] === "agent.completed"
+              )
+                setAgents((items) =>
+                  [
+                    ...items.filter((item) => item.name !== data.name),
+                    {
+                      name: data.name,
+                      status:
+                        event[1] === "agent.started" ? "working" : "completed",
+                    },
+                  ].slice(-14),
+                );
+              if (event[1] === "council.vote")
+                setAgents((items) =>
+                  [
+                    ...items.filter((item) => item.name !== data.judge),
+                    { name: data.judge, status: "voting" },
+                  ].slice(-14),
+                );
               if (event[1] === "message.finished")
                 setActivity((items) => [
                   ...items.slice(-19),
@@ -371,12 +396,15 @@ export default function LiveWorkspace() {
           </div>
         )}
         {activity.length > 0 && (
-          <details style={{ padding: "8px 24px" }}>
-            <summary>Agent activity · {activity.at(-1)}</summary>
-            {activity.map((item, i) => (
-              <p key={i}>{item}</p>
-            ))}
-          </details>
+          <div className="aw-live-activity">
+            <AgentConstellation activeAgents={agents} live />
+            <details>
+              <summary>Agent activity · {activity.at(-1)}</summary>
+              {activity.map((item, i) => (
+                <p key={i}>{item}</p>
+              ))}
+            </details>
+          </div>
         )}
         {notice && (
           <div className="aw-offline" role="status">

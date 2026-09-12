@@ -18,13 +18,40 @@ const COLLEGES = [
 ];
 
 const palette = ["#d5bd8c", "#91b9a8", "#93a9cf", "#c58d83"];
+const aliases = {
+  critic: "Evaluation",
+  security: "Security",
+  alignment: "Governance",
+  constraint: "Legal",
+  evaluator: "Evaluation",
+  documentation: "Research",
+  "aetherion prime": "Strategy",
+  "chief of staff": "Strategy",
+};
+
+const collegeFor = (name = "") => {
+  const normalized = name.toLowerCase();
+  return (
+    aliases[normalized] ||
+    COLLEGES.find((college) => normalized.includes(college.toLowerCase())) ||
+    ""
+  );
+};
 
 /** A lightweight, browser-rendered institution map with no external scene asset. */
-export default function AgentConstellation() {
+export default function AgentConstellation({
+  activeAgents = [],
+  live = false,
+}) {
   const canvasRef = useRef(null);
   const points = useRef([]);
   const hoveredRef = useRef("");
+  const activityRef = useRef(activeAgents);
   const [hovered, setHovered] = useState("");
+
+  useEffect(() => {
+    activityRef.current = activeAgents;
+  }, [activeAgents]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -125,14 +152,23 @@ export default function AgentConstellation() {
       });
       points.current = nodes;
       const center = project(0, 0, 0);
+      const statuses = new Map(
+        activityRef.current.map((agent) => [
+          collegeFor(agent.name),
+          agent.status || "working",
+        ]),
+      );
 
       ctx.lineWidth = 0.6;
       nodes.forEach((node, index) => {
         const next = nodes[(index + 1) % nodes.length];
+        const status = statuses.get(node.name);
         ctx.beginPath();
         ctx.moveTo(node.x, node.y);
         ctx.lineTo(center[0], center[1]);
-        ctx.strokeStyle = `rgba(171, 196, 172, ${0.07 + Math.max(0, 1 - Math.abs(node.depth) / 260) * 0.12})`;
+        ctx.strokeStyle = status
+          ? `rgba(221, 204, 157, ${status === "working" || status === "voting" ? 0.34 : 0.2})`
+          : `rgba(171, 196, 172, ${0.07 + Math.max(0, 1 - Math.abs(node.depth) / 260) * 0.12})`;
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(node.x, node.y);
@@ -146,19 +182,26 @@ export default function AgentConstellation() {
         .sort((a, b) => a.depth - b.depth)
         .forEach((node) => {
           const focus = hoveredRef.current === node.name;
-          const pulse = focus
-            ? 1.9
-            : 1 + Math.sin(time * 2.2 + node.index) * 0.22;
-          const radius = (focus ? 6.2 : 3.5) * pulse;
+          const status = statuses.get(node.name);
+          const live = status === "working" || status === "voting";
+          const pulse =
+            focus || live ? 1.9 : 1 + Math.sin(time * 2.2 + node.index) * 0.22;
+          const radius = (focus ? 6.2 : live ? 5 : 3.5) * pulse;
+          const color =
+            focus || live
+              ? "#f0d28b"
+              : status === "completed"
+                ? "#8dbda5"
+                : palette[node.index % palette.length];
           ctx.beginPath();
           ctx.arc(node.x, node.y, radius * 2.4, 0, Math.PI * 2);
-          ctx.fillStyle = `${palette[node.index % palette.length]}18`;
+          ctx.fillStyle = `${color}18`;
           ctx.fill();
           ctx.beginPath();
           ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-          ctx.fillStyle = palette[node.index % palette.length];
-          ctx.shadowColor = palette[node.index % palette.length];
-          ctx.shadowBlur = focus ? 18 : 8;
+          ctx.fillStyle = color;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = focus || live ? 18 : 8;
           ctx.fill();
           ctx.shadowBlur = 0;
         });
@@ -203,9 +246,18 @@ export default function AgentConstellation() {
         aria-label="Interactive constellation of Aetherion's fourteen colleges"
       />
       <div className="aw-constellation-meta">
-        <span>INSTITUTIONAL CONSTELLATION</span>
+        <span>
+          {live
+            ? "LIVE INSTITUTIONAL CONSTELLATION"
+            : "INSTITUTIONAL CONSTELLATION"}
+        </span>
         <b>{hovered || "Chief of Staff"}</b>
-        <small>14 colleges · 74 versioned agents</small>
+        <small>
+          {live && activeAgents.length
+            ? `${activeAgents.length} live signals · `
+            : ""}
+          14 colleges · 74 versioned agents
+        </small>
       </div>
     </div>
   );
