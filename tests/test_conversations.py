@@ -67,7 +67,9 @@ def test_branch_clones_history_through_selected_assistant_response(tmp_path):
     )
     store.add_message("operator", conversation["id"], "user", "Add rollback")
 
-    branch = store.branch("operator", conversation["id"], first_assistant["id"])
+    branch = store.branch(
+        "operator", conversation["id"], first_assistant["id"]
+    )
 
     assert branch["id"] != conversation["id"]
     assert branch["title"] == "Branch · Release mission"
@@ -79,7 +81,10 @@ def test_branch_clones_history_through_selected_assistant_response(tmp_path):
         item["id"] not in {first_user["id"], first_assistant["id"]}
         for item in branch["messages"]
     )
-    assert store.branch("other", conversation["id"], first_assistant["id"]) is None
+    assert (
+        store.branch("other", conversation["id"], first_assistant["id"])
+        is None
+    )
 
 
 def test_chief_of_staff_routes_each_mode():
