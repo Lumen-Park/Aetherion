@@ -1,0 +1,8 @@
+.venv/
+.test-*
+__pycache__/
+*.pyc
+.env
+.env.local
+.env.production
+data/

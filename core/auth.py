@@ -52,7 +52,8 @@ class AuthManager:
         if not api_key:
             return None
         hashed = self._hash_key(api_key)
-        return self.api_keys.get(hashed)
+        info = self.api_keys.get(hashed)
+        return {**info, "sub": "api-key:" + hashed} if info else None
 
     def verify_jwt(self, token: str) -> Optional[Dict[str, Any]]:
         """Verify a JWT token and return its payload."""
@@ -74,10 +75,9 @@ class AuthManager:
         if not self.auth_enabled:
             return {"role": "admin", "auth_disabled": True}
 
-        from core.oauth import OAuthManager
-
-        oauth = OAuthManager()
         try:
+            from core.oauth import OAuthManager
+            oauth = OAuthManager()
             user_info = oauth.get_user_info(provider_name, access_token)
             # Map OAuth user to a role (default to operator)
             return {

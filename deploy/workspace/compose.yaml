@@ -1,0 +1,48 @@
+services:
+  workspace:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    restart: unless-stopped
+    environment:
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_SUPABASE_URL: ${AETHERION_SUPABASE_URL:-}
+      AETHERION_SUPABASE_PUBLISHABLE_KEY: ${AETHERION_SUPABASE_PUBLISHABLE_KEY:-}
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Set a unique API key for every user}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Set a random secret of at least 32 characters}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Set an installed Ollama model}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Set a reachable private Ollama URL}
+      AETHERION_CONVERSATIONS_DB: /data/conversations.sqlite3
+      AETHERION_CORS_ORIGINS: https://${AETHERION_DOMAIN:?Set your domain}
+    volumes:
+      - conversation_data:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      AETHERION_DOMAIN: ${AETHERION_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../dashboard/dist:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      workspace:
+        condition: service_healthy
+volumes:
+  conversation_data:
+  caddy_data:
+  caddy_config:

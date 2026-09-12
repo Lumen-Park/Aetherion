@@ -1,50 +1,10 @@
-"""
-Aetherion Core Module
-Exports protocol, state management, memory, authentication, OAuth, and workspace management.
-"""
-
-from core.auth import AuthManager
-from core.memory import AgentReputation, Archivist, KnowledgeGraph, MemoryEntry
-from core.oauth import OAuthManager, OIDCProvider
-from core.protocol import (
-    AgentMessage,
-    LLMWrapper,
-    Priority,
-    StrictLLMWrapper,
-    ToolEnabledLLMWrapper,
-    Verdict,
-)
-from core.task_state import (
-    VALID_TRANSITIONS,
-    TaskContext,
-    TaskState,
-    TaskStateManager,
-)
-from core.workspace import WorkspaceManager
-
-__all__ = [
-    # Protocol
-    "AgentMessage",
-    "LLMWrapper",
-    "Priority",
-    "Verdict",
-    "StrictLLMWrapper",
-    "ToolEnabledLLMWrapper",
-    # State
-    "TaskState",
-    "TaskContext",
-    "TaskStateManager",
-    "VALID_TRANSITIONS",
-    # Memory
-    "KnowledgeGraph",
-    "AgentReputation",
-    "Archivist",
-    "MemoryEntry",
-    # Auth
-    "AuthManager",
-    # OAuth
-    "OAuthManager",
-    "OIDCProvider",
-    # Workspace
-    "WorkspaceManager",
-]
+"""Lazy core exports keep optional integrations optional."""
+import importlib
+_EXPORTS = {'AuthManager': 'core.auth', 'AgentReputation': 'core.memory', 'Archivist': 'core.memory', 'KnowledgeGraph': 'core.memory', 'MemoryEntry': 'core.memory', 'OAuthManager': 'core.oauth', 'OIDCProvider': 'core.oauth', 'AgentMessage': 'core.protocol', 'LLMWrapper': 'core.protocol', 'Priority': 'core.protocol', 'StrictLLMWrapper': 'core.protocol', 'ToolEnabledLLMWrapper': 'core.protocol', 'Verdict': 'core.protocol', 'VALID_TRANSITIONS': 'core.task_state', 'TaskContext': 'core.task_state', 'TaskState': 'core.task_state', 'TaskStateManager': 'core.task_state', 'WorkspaceManager': 'core.workspace'}
+__all__ = list(_EXPORTS)
+def __getattr__(name):
+    if name not in _EXPORTS:
+        raise AttributeError(name)
+    value = getattr(importlib.import_module(_EXPORTS[name]), name)
+    globals()[name] = value
+    return value

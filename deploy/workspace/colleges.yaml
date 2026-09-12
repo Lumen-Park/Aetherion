@@ -1,0 +1,240 @@
+# Optional isolated college services. Run alongside the workspace compose file.
+services:
+  college-advanced-research:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Advanced Research"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-arts-media:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Arts & Media"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-business-economics:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Business & Economics"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-data-analytics:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Data & Analytics"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-engineering:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Engineering"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-environment-climate:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Environment & Climate"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-esoteric:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Esoteric"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-experiment:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Experiment"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-health-medicine:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Health & Medicine"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-humanities:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Humanities"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-law-policy:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Law & Policy"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-natural-sciences:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Natural Sciences"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-research-tools:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Research Tools"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+  college-security-defense:
+    build:
+      context: ../..
+      dockerfile: deploy/workspace/Dockerfile
+    profiles: [colleges]
+    restart: unless-stopped
+    command: [uvicorn, institution.service:app, --host, 0.0.0.0, --port, "8000", --workers, "1"]
+    environment:
+      AETHERION_COLLEGE: "Security & Defense"
+      AETHERION_REQUIRE_AUTH: "true"
+      AETHERION_API_KEYS: ${AETHERION_API_KEYS:?Required}
+      AETHERION_JWT_SECRET: ${AETHERION_JWT_SECRET:?Required}
+      AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Required}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Required}
+    expose: ["8000"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]

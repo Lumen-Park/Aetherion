@@ -116,6 +116,7 @@ class ConversationStore:
 
     def get(self, owner: str, conversation_id: str):
         with self.connect() as db:
+            db.execute("BEGIN")
             row = db.execute(
                 "SELECT * FROM conversations WHERE id = ? AND owner = ?",
                 (conversation_id, owner),
@@ -129,9 +130,12 @@ class ConversationStore:
                     (conversation_id,),
                 ).fetchall()
             ]
+            sequence = db.execute("SELECT COALESCE(MAX(sequence), 0) FROM conversation_events WHERE conversation_id=?", (conversation_id,)).fetchone()[0]
         for message in messages:
             message["metadata"] = json.loads(message["metadata"])
-        return self._conversation(row, messages)
+        result = self._conversation(row, messages)
+        result["last_event_sequence"] = sequence
+        return result
 
     def rename(self, owner: str, conversation_id: str, title: str):
         with self._lock, self.connect() as db:
@@ -224,12 +228,12 @@ def get_store():
 
 
 def owner_id(user: dict):
-    return str(
-        user.get("sub")
-        or user.get("email")
-        or user.get("role")
-        or "local-admin"
-    )
+    if user.get("auth_disabled"):
+        return "local-admin"
+    identity = user.get("sub") or user.get("email")
+    if not identity or identity == "api_key_user":
+        raise HTTPException(status_code=401, detail="Identity is missing; sign in again")
+    return str(identity)
 
 
 def chief_response(request: MessageCreate):

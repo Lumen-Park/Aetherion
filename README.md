@@ -1,3 +1,5 @@
+> **Workspace implementation status:** See [LIVE_WORKSPACE.md](LIVE_WORKSPACE.md) for verified capabilities, remaining integrations, and deployment requirements. Production deployment and Blender assets are not complete.
+
 <p align="center">
   <img src="https://img.shields.io/badge/AETHERION-v7.0.0-000000?style=for-the-badge&logo=starship&logoColor=white&labelColor=1a1a2e" alt="Version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">

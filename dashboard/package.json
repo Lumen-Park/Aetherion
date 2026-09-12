@@ -6,13 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:demo": "vite --mode demo",
+    "build:demo": "vite build --mode demo",
+    "format:workspace": "prettier --check src/components/Workspace.jsx src/components/WorkspaceParts.jsx src/components/OrbitalCore.jsx src/components/workspace-premium.css src/APP.jsx"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.3.1",
+    "@supabase/supabase-js": "^2.116.0",
     "axios": "^1.7.0",
+    "lucide-react": "^1.44.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^7.18.3"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.3",
+    "rehype-highlight": "^7.0.2"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
@@ -20,6 +28,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
+    "prettier": "^3.9.6",
     "tailwindcss": "^3.4.0",
     "vite": "^8.1.5"
   },
