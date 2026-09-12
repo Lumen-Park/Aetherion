@@ -452,7 +452,10 @@ def test_council_persists_seven_votes_and_security_veto(client, monkeypatch):
     assert decision.status_code == 200
     assert decision.json()["council"]["human_decision"] == "reject"
     saved = client.get(f"/api/conversations/{cid}", headers=headers()).json()
-    assert saved["messages"][-1]["metadata"]["council"]["approval_required"] is False
+    assert (
+        saved["messages"][-1]["metadata"]["council"]["approval_required"]
+        is False
+    )
     assert (
         client.patch(
             f"/api/conversations/{cid}/messages/{result['id']}/council-decision",
@@ -461,7 +464,10 @@ def test_council_persists_seven_votes_and_security_veto(client, monkeypatch):
         ).status_code
         == 422
     )
-    assert any(event["event"] == "council.human_decision" for event in get_store().events(cid, 0))
+    assert any(
+        event["event"] == "council.human_decision"
+        for event in get_store().events(cid, 0)
+    )
 
 
 def test_council_human_approval_can_be_recorded(client):
