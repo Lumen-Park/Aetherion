@@ -129,7 +129,9 @@ def test_message_feedback_persists_and_is_isolated(client):
         "A bounded answer.",
         metadata={"status": "completed"},
     )
-    feedback_url = f"/api/conversations/{cid}/messages/{assistant['id']}/feedback"
+    feedback_url = (
+        f"/api/conversations/{cid}/messages/{assistant['id']}/feedback"
+    )
     response = client.patch(
         feedback_url, headers=headers(), json={"value": "up"}
     )
@@ -142,9 +144,12 @@ def test_message_feedback_persists_and_is_isolated(client):
         feedback_url, headers=headers(), json={"value": None}
     )
     assert cleared.status_code == 200
-    assert "feedback" not in client.get(
-        f"/api/conversations/{cid}", headers=headers()
-    ).json()["messages"][-1]["metadata"]
+    assert (
+        "feedback"
+        not in client.get(
+            f"/api/conversations/{cid}", headers=headers()
+        ).json()["messages"][-1]["metadata"]
+    )
     assert (
         client.patch(
             feedback_url, headers=headers("bob"), json={"value": "down"}
