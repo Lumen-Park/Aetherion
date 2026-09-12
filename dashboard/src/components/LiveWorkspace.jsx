@@ -19,6 +19,8 @@ import {
   X,
   ChevronRight,
   Paperclip,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
 import AgentConstellation from "./AgentConstellation";
@@ -52,6 +54,9 @@ export default function LiveWorkspace() {
     );
   const [chatQuery, setChatQuery] = useState("");
   const [historyCursor, setHistoryCursor] = useState(-1);
+  const [editingChat, setEditingChat] = useState(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [confirmingChat, setConfirmingChat] = useState(null);
   const [messages, setMessages] = useState([]),
     [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState([]),
@@ -422,6 +427,8 @@ export default function LiveWorkspace() {
   };
   const newConversation = () => {
     if (!active) updateDraft("");
+    setEditingChat(null);
+    setConfirmingChat(null);
     setActive(null);
     setAttachments([]);
     setAgents([]);
@@ -476,8 +483,48 @@ export default function LiveWorkspace() {
     );
   }, [visibleChats.length]);
   const selectConversation = (id) => {
+    setEditingChat(null);
+    setConfirmingChat(null);
     setActive(id);
     setDrawer(false);
+  };
+  const startRename = (chat) => {
+    setConfirmingChat(null);
+    setEditingChat(chat.id);
+    setEditingTitle(chat.title);
+  };
+  const saveRename = async (chat) => {
+    const title = editingTitle.trim();
+    if (!title) return;
+    try {
+      await request(`/conversations/${chat.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title }),
+      });
+      setChats((items) =>
+        items.map((item) => (item.id === chat.id ? { ...item, title } : item)),
+      );
+      setEditingChat(null);
+      setNotice("Conversation title updated.");
+    } catch (error) {
+      setNotice(error.message);
+    }
+  };
+  const deleteConversation = async (chat) => {
+    if (chat.id === active && busy) {
+      setNotice("Stop the active response before deleting this conversation.");
+      return;
+    }
+    try {
+      await request(`/conversations/${chat.id}`, { method: "DELETE" });
+      const remaining = chats.filter((item) => item.id !== chat.id);
+      setChats(remaining);
+      if (active === chat.id) setActive(remaining[0]?.id || null);
+      setConfirmingChat(null);
+      setNotice("Conversation deleted.");
+    } catch (error) {
+      setNotice(error.message);
+    }
   };
   const handleHistoryKeyDown = (event) => {
     if (!visibleChats.length) return;
@@ -557,18 +604,92 @@ export default function LiveWorkspace() {
         <div id="live-conversation-history" className="aw-history">
           {visibleChats.length ? (
             visibleChats.map((chat, index) => (
-              <button
+              <div
                 key={chat.id}
-                id={`live-conversation-${chat.id}`}
-                className={`aw-nav ${chat.id === active ? "selected" : ""} ${
-                  index === historyCursor ? "history-cursor" : ""
-                }`}
-                aria-current={chat.id === active ? "page" : undefined}
-                onClick={() => selectConversation(chat.id)}
+                className={`aw-history-row ${chat.id === active ? "selected" : ""}`}
               >
-                <span className="aw-history-dot" />
-                <span>{chat.title}</span>
-              </button>
+                {editingChat === chat.id ? (
+                  <form
+                    className="aw-history-edit"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      saveRename(chat);
+                    }}
+                  >
+                    <input
+                      aria-label={`Rename ${chat.title}`}
+                      autoFocus
+                      maxLength={160}
+                      value={editingTitle}
+                      onChange={(event) => setEditingTitle(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setEditingChat(null);
+                        }
+                      }}
+                    />
+                    <IconButton label="Save title" type="submit">
+                      <Check size={13} />
+                    </IconButton>
+                    <IconButton
+                      label="Cancel rename"
+                      type="button"
+                      onClick={() => setEditingChat(null)}
+                    >
+                      <X size={13} />
+                    </IconButton>
+                  </form>
+                ) : confirmingChat === chat.id ? (
+                  <div className="aw-history-confirm">
+                    <span>Delete conversation?</span>
+                    <button
+                      type="button"
+                      className="aw-history-confirm-delete"
+                      onClick={() => deleteConversation(chat)}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingChat(null)}
+                    >
+                      Keep
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      id={`live-conversation-${chat.id}`}
+                      className={`aw-nav ${chat.id === active ? "selected" : ""} ${
+                        index === historyCursor ? "history-cursor" : ""
+                      }`}
+                      aria-current={chat.id === active ? "page" : undefined}
+                      onClick={() => selectConversation(chat.id)}
+                    >
+                      <span className="aw-history-dot" />
+                      <span>{chat.title}</span>
+                    </button>
+                    <IconButton
+                      label={`Rename ${chat.title}`}
+                      onClick={() => startRename(chat)}
+                    >
+                      <Pencil size={13} />
+                    </IconButton>
+                    <IconButton
+                      label={`Delete ${chat.title}`}
+                      disabled={chat.id === active && busy}
+                      onClick={() => {
+                        setEditingChat(null);
+                        setConfirmingChat(chat.id);
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </IconButton>
+                  </>
+                )}
+              </div>
             ))
           ) : (
             <p className="aw-live-history-empty">No conversations found.</p>

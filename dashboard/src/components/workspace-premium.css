@@ -329,6 +329,69 @@
 .aw-history-row:focus-within > .aw-icon {
   opacity: 1;
 }
+.aw-history-row > .aw-icon:last-child:hover {
+  color: #d79090;
+}
+.aw-history-edit,
+.aw-history-confirm {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+}
+.aw-history-edit input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid #cdbd8b35;
+  border-radius: 5px;
+  padding: 6px 7px;
+  outline: none;
+  background: #cdbd8b0b;
+  color: #e4e6db;
+  font: inherit;
+  font-size: 10px;
+}
+.aw-history-edit input:focus {
+  border-color: #cdbd8b75;
+  box-shadow: 0 0 0 3px #cdbd8b0b;
+}
+.aw-history-edit .aw-icon {
+  opacity: 1;
+  width: 24px;
+  height: 24px;
+}
+.aw-history-confirm {
+  padding: 6px 8px;
+  border: 1px solid #d7909028;
+  border-radius: 6px;
+  background: #d7909009;
+}
+.aw-history-confirm span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: #c7bdb0;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aw-history-confirm button {
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border: 1px solid #ffffff12;
+  border-radius: 4px;
+  color: #aab09f;
+  font-size: 8px;
+}
+.aw-history-confirm button:hover {
+  background: #ffffff08;
+  color: #e4e6db;
+}
+.aw-history-confirm .aw-history-confirm-delete {
+  border-color: #d7909040;
+  color: #e2a2a2;
+}
 .aw-history-row.selected {
   background: #ffffff04;
   color: #e0d6be;

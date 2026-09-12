@@ -26,10 +26,10 @@ async def lifespan(app):
 
 app = FastAPI(title="Aetherion Live Workspace", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in os.getenv("AETHERION_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if x.strip()], allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["Authorization", "Content-Type"])
-# Mount only persistent CRUD and authenticated event routes from the legacy router.
+# Mount persistent CRUD and authenticated event routes from the legacy router.
 from fastapi import APIRouter
 persistent = APIRouter()
-persistent.routes = [route for route in conversations.routes if not route.path.endswith(("/messages", "/cancel")) and "DELETE" not in route.methods]
+persistent.routes = [route for route in conversations.routes if not route.path.endswith(("/messages", "/cancel"))]
 app.include_router(persistent, prefix="/api")
 app.include_router(runtime.router, prefix="/api")
 

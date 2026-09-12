@@ -164,6 +164,29 @@ def test_message_feedback_persists_and_is_isolated(client):
     )
 
 
+def test_conversation_rename_and_delete_are_authenticated(client):
+    cid = create(client)
+    renamed = client.patch(
+        f"/api/conversations/{cid}",
+        headers=headers(),
+        json={"title": "Renamed mission"},
+    )
+    assert renamed.status_code == 200
+    assert client.get(f"/api/conversations/{cid}", headers=headers()).json()[
+        "title"
+    ] == "Renamed mission"
+    assert (
+        client.patch(
+            f"/api/conversations/{cid}",
+            headers=headers("reader"),
+            json={"title": "Not allowed"},
+        ).status_code
+        == 403
+    )
+    assert client.delete(f"/api/conversations/{cid}", headers=headers()).status_code == 204
+    assert client.get(f"/api/conversations/{cid}", headers=headers()).status_code == 404
+
+
 def test_cancel_keeps_partial_and_blocks_overlap(client, monkeypatch):
     async def provider(messages):
         yield "Partial"
