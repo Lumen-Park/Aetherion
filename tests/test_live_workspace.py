@@ -571,12 +571,14 @@ def test_text_attachments_are_ingested_without_persisting_content(
                 ],
                 "request_id": str(uuid.uuid4()),
             },
-    ).status_code
+        ).status_code
         == 422
     )
 
 
-def test_allowlisted_research_sources_are_cited_and_persisted(client, monkeypatch):
+def test_allowlisted_research_sources_are_cited_and_persisted(
+    client, monkeypatch
+):
     captured = {}
 
     async def provider(messages):
