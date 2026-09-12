@@ -8,6 +8,7 @@ import {
   Download,
   PanelLeft,
   Copy,
+  Check,
   ShieldCheck,
   Command,
   Search,
@@ -23,6 +24,23 @@ import "./workspace-premium.css";
 
 const origin = (import.meta.env.VITE_API_ORIGIN || "").replace(/\/$/, "");
 const ACTIVE_CONVERSATION_KEY = "aetherion_live_active_conversation";
+const DRAFT_CACHE_KEY = "aetherion_live_drafts";
+const NEW_DRAFT_KEY = "__new__";
+const readDraftCache = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DRAFT_CACHE_KEY) || "{}");
+    return stored && typeof stored === "object" ? stored : {};
+  } catch {
+    return {};
+  }
+};
+const writeDraftCache = (cache) => {
+  try {
+    localStorage.setItem(DRAFT_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Draft persistence is best effort when browser storage is unavailable.
+  }
+};
 export default function LiveWorkspace() {
   const [chats, setChats] = useState([]),
     [active, setActive] = useState(
@@ -49,7 +67,8 @@ export default function LiveWorkspace() {
     composer = useRef(null),
     palette = useRef(null),
     fileInput = useRef(null),
-    historySearch = useRef(null);
+    historySearch = useRef(null),
+    draftCache = useRef(null);
   const token =
     localStorage.getItem("aetherion_token") ||
     sessionStorage.getItem("aetherion_token");
@@ -90,6 +109,25 @@ export default function LiveWorkspace() {
     if (active) localStorage.setItem(ACTIVE_CONVERSATION_KEY, active);
     else localStorage.removeItem(ACTIVE_CONVERSATION_KEY);
   }, [active]);
+  const getDraftCache = () => {
+    if (!draftCache.current) draftCache.current = readDraftCache();
+    return draftCache.current;
+  };
+  const updateDraft = (value) => {
+    setDraft((current) => {
+      const next = typeof value === "function" ? value(current) : value;
+      const cache = getDraftCache();
+      const key = active || NEW_DRAFT_KEY;
+      if (next.trim()) cache[key] = next;
+      else delete cache[key];
+      writeDraftCache(cache);
+      return next;
+    });
+  };
+  useEffect(() => {
+    const cache = getDraftCache();
+    setDraft(cache[active || NEW_DRAFT_KEY] || "");
+  }, [active]);
   useEffect(() => {
     list().catch((e) => {
       setNotice(e.message);
@@ -113,7 +151,6 @@ export default function LiveWorkspace() {
     setActivity([]);
     setAgents([]);
     setCouncil(null);
-    setDraft("");
     const sync = async () => {
       const chat = await (
         await request(`/conversations/${active}`, { signal: controller.signal })
@@ -258,7 +295,7 @@ export default function LiveWorkspace() {
           request_id: crypto.randomUUID(),
         }),
       });
-      setDraft("");
+      updateDraft("");
       setAttachments([]);
       await list();
       const chat = await (await request(`/conversations/${id}`)).json();
@@ -280,8 +317,8 @@ export default function LiveWorkspace() {
     }
   };
   const newConversation = () => {
+    if (!active) updateDraft("");
     setActive(null);
-    setDraft("");
     setAttachments([]);
     setAgents([]);
     setCouncil(null);
@@ -647,7 +684,7 @@ export default function LiveWorkspace() {
             aria-label="Message Aetherion"
             placeholder="An idea, a question, a little ambition…"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => updateDraft(e.target.value)}
             onKeyDown={(e) => {
               if (
                 e.key === "Enter" &&
@@ -660,6 +697,11 @@ export default function LiveWorkspace() {
               if (e.key === "Escape") stop();
             }}
           />
+          {draft.trim() && (
+            <div className="aw-draft-status" role="status">
+              <Check size={12} /> Draft saved on this device
+            </div>
+          )}
           <div className="aw-composer-toolbar">
             <input
               ref={fileInput}
@@ -680,7 +722,7 @@ export default function LiveWorkspace() {
             </IconButton>
             <VoiceControls
               onTranscript={(text) =>
-                setDraft((value) => `${value} ${text}`.trim())
+                updateDraft((value) => `${value} ${text}`.trim())
               }
               text={latest?.content}
               onNotice={setNotice}

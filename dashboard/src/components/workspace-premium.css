@@ -639,6 +639,18 @@
 .aw-composer textarea::placeholder {
   color: #a8ab9e;
 }
+.aw-draft-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: -4px 6px 8px;
+  color: #a5ad94;
+  font-size: 8px;
+  letter-spacing: 0.04em;
+}
+.aw-draft-status svg {
+  color: var(--gold);
+}
 .aw-composer-toolbar {
   display: flex;
   align-items: center;
