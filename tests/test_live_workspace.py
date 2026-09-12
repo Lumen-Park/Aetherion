@@ -115,8 +115,14 @@ def test_profile_is_owner_scoped_and_persistent(client):
         },
     )
     assert saved.status_code == 200
-    assert client.get("/api/profile", headers=headers()).json()["nickname"] == "Ada"
-    assert client.get("/api/profile", headers=headers("bob")).json()["name"] == "Operator"
+    assert (
+        client.get("/api/profile", headers=headers()).json()["nickname"]
+        == "Ada"
+    )
+    assert (
+        client.get("/api/profile", headers=headers("bob")).json()["name"]
+        == "Operator"
+    )
     assert (
         client.put(
             "/api/profile",
