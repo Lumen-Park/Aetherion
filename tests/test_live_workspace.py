@@ -259,19 +259,38 @@ def test_branch_endpoint_preserves_context_and_enforces_roles(client):
 def test_draft_sync_persists_and_clears_per_conversation(client):
     cid = create(client)
     draft_url = f"/api/conversations/{cid}/draft"
-    assert client.get(draft_url, headers=headers()).json()["content"] == ""
+    assert client.get(draft_url, headers=headers()).json() == {
+        "conversation_id": cid,
+        "content": "",
+        "revision": 0,
+        "updated_at": None,
+    }
     saved = client.put(
         draft_url,
         headers=headers(),
-        json={"content": "Continue this mission tomorrow."},
+        json={"content": "Continue this mission tomorrow.", "revision": 0},
     )
     assert saved.status_code == 200
     assert saved.json()["content"] == "Continue this mission tomorrow."
+    assert saved.json()["revision"] == 1
     assert client.get(draft_url, headers=headers()).json()["content"] == (
         "Continue this mission tomorrow."
     )
-    cleared = client.put(draft_url, headers=headers(), json={"content": ""})
+    conflict = client.put(
+        draft_url,
+        headers=headers(),
+        json={"content": "Stale edit", "revision": 0},
+    )
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"]["content"] == (
+        "Continue this mission tomorrow."
+    )
+    assert conflict.json()["detail"]["revision"] == 1
+    cleared = client.put(
+        draft_url, headers=headers(), json={"content": "", "revision": 1}
+    )
     assert cleared.status_code == 200
+    assert cleared.json()["revision"] == 2
     assert client.get(draft_url, headers=headers()).json()["content"] == ""
     assert client.get(draft_url, headers=headers("bob")).status_code == 404
     assert (

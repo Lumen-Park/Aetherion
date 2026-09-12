@@ -101,6 +101,7 @@ export default function LiveWorkspace() {
     [connected, setConnected] = useState(false);
   const [syncState, setSyncState] = useState("syncing");
   const [draftSyncState, setDraftSyncState] = useState("local");
+  const [draftConflict, setDraftConflict] = useState(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const selection = useRef(null),
     submitting = useRef(false),
@@ -111,7 +112,8 @@ export default function LiveWorkspace() {
     draftCache = useRef(null),
     draftValue = useRef(""),
     draftSaveTimer = useRef(null),
-    draftRevision = useRef(0);
+    draftRevision = useRef(0),
+    draftCloudRevision = useRef(0);
   const token =
     localStorage.getItem("aetherion_token") ||
     sessionStorage.getItem("aetherion_token");
@@ -126,11 +128,14 @@ export default function LiveWorkspace() {
     });
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      throw new Error(
+      const error = new Error(
         typeof data.detail === "string"
           ? data.detail
           : `Request failed (${response.status}). Please retry.`,
       );
+      error.status = response.status;
+      error.detail = data.detail;
+      throw error;
     }
     return response;
   };
@@ -173,13 +178,34 @@ export default function LiveWorkspace() {
     draftSaveTimer.current = setTimeout(() => {
       request(`/conversations/${conversationId}/draft`, {
         method: "PUT",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          revision: draftCloudRevision.current,
+        }),
       })
-        .then(() => {
+        .then(async (response) => {
+          const data = await response.json();
+          draftCloudRevision.current = Number(data.revision || 0);
           if (revision === draftRevision.current) setDraftSyncState("cloud");
         })
         .catch((error) => {
           if (revision !== draftRevision.current) return;
+          if (
+            error.status === 409 &&
+            error.detail &&
+            typeof error.detail === "object"
+          ) {
+            setDraftConflict({
+              localContent: content,
+              serverContent: error.detail.content || "",
+              serverRevision: Number(error.detail.revision || 0),
+            });
+            setDraftSyncState("conflict");
+            setNotice(
+              "Draft changed in another tab. Choose which version to keep.",
+            );
+            return;
+          }
           setDraftSyncState("local");
           setNotice(`Draft sync paused: ${error.message}`);
         });
@@ -188,6 +214,7 @@ export default function LiveWorkspace() {
   const updateDraft = (value) => {
     const next =
       typeof value === "function" ? value(draftValue.current) : value;
+    setDraftConflict(null);
     draftValue.current = next;
     draftRevision.current += 1;
     saveDraftCacheFor(active || NEW_DRAFT_KEY, next);
@@ -195,11 +222,41 @@ export default function LiveWorkspace() {
     scheduleCloudDraftSave(active, next);
   };
   const setDraftForConversation = (conversationId, content) => {
+    if (conversationId !== active) draftCloudRevision.current = 0;
+    setDraftConflict(null);
     draftValue.current = content;
     draftRevision.current += 1;
     saveDraftCacheFor(conversationId || NEW_DRAFT_KEY, content);
     setDraft(content);
     scheduleCloudDraftSave(conversationId, content);
+  };
+  const resolveDraftConflict = (choice) => {
+    if (!draftConflict) return;
+    clearTimeout(draftSaveTimer.current);
+    draftCloudRevision.current = draftConflict.serverRevision;
+    if (choice === "cloud") {
+      draftRevision.current += 1;
+      draftValue.current = draftConflict.serverContent;
+      setDraft(draftConflict.serverContent);
+      saveDraftCacheFor(active || NEW_DRAFT_KEY, draftConflict.serverContent);
+      setDraftConflict(null);
+      setDraftSyncState("cloud");
+      setNotice("Using the workspace version of this draft.");
+      return;
+    }
+    const next =
+      choice === "merge"
+        ? [draftConflict.serverContent, draftConflict.localContent]
+            .filter(Boolean)
+            .join("\n\n")
+        : draftConflict.localContent;
+    setDraftConflict(null);
+    updateDraft(next);
+    setNotice(
+      choice === "merge"
+        ? "Combined both drafts. Review the result before sending."
+        : "Keeping your local draft and syncing it to the workspace.",
+    );
   };
   useEffect(() => {
     clearTimeout(draftSaveTimer.current);
@@ -207,6 +264,8 @@ export default function LiveWorkspace() {
     const revision = draftRevision.current;
     const cache = getDraftCache();
     const localDraft = cache[active || NEW_DRAFT_KEY] || "";
+    draftCloudRevision.current = 0;
+    setDraftConflict(null);
     draftValue.current = localDraft;
     setDraft(localDraft);
     setDraftSyncState(active ? "syncing" : "local");
@@ -217,6 +276,21 @@ export default function LiveWorkspace() {
       .then((data) => {
         if (controller.signal.aborted || revision !== draftRevision.current)
           return;
+        draftCloudRevision.current = Number(data.revision || 0);
+        if (localDraft && data.content && localDraft !== data.content) {
+          draftValue.current = localDraft;
+          setDraft(localDraft);
+          setDraftConflict({
+            localContent: localDraft,
+            serverContent: data.content,
+            serverRevision: draftCloudRevision.current,
+          });
+          setDraftSyncState("conflict");
+          setNotice(
+            "Draft changed in another tab. Choose which version to keep.",
+          );
+          return;
+        }
         const content = data.content || localDraft;
         draftValue.current = content;
         saveDraftCacheFor(active, content);
@@ -405,7 +479,13 @@ export default function LiveWorkspace() {
     requestAttachments = [],
     clearDraft = false,
   }) => {
-    if (!content.trim() || submitting.current || busy || readingAttachments)
+    if (
+      !content.trim() ||
+      submitting.current ||
+      busy ||
+      readingAttachments ||
+      draftConflict
+    )
       return;
     submitting.current = true;
     setBusy(true);
@@ -582,6 +662,7 @@ export default function LiveWorkspace() {
       syncing: "Loading workspace draft…",
       saving: "Saving draft to workspace…",
       cloud: "Draft synced to workspace",
+      conflict: "Draft conflict needs your choice",
       local: "Draft saved on this device",
     }[draftSyncState] || "Draft saved on this device";
   useEffect(() => {
@@ -1080,6 +1161,36 @@ export default function LiveWorkspace() {
               <Check size={12} /> {draftStatus}
             </div>
           )}
+          {draftConflict && (
+            <div className="aw-draft-conflict" role="alert">
+              <div>
+                <strong>Draft changed elsewhere</strong>
+                <span>
+                  Choose how to reconcile the workspace and local versions.
+                </span>
+              </div>
+              <div className="aw-draft-conflict-actions">
+                <button
+                  type="button"
+                  onClick={() => resolveDraftConflict("cloud")}
+                >
+                  Use workspace
+                </button>
+                <button
+                  type="button"
+                  onClick={() => resolveDraftConflict("local")}
+                >
+                  Keep mine
+                </button>
+                <button
+                  type="button"
+                  onClick={() => resolveDraftConflict("merge")}
+                >
+                  Combine
+                </button>
+              </div>
+            </div>
+          )}
           {readingAttachments && (
             <div className="aw-draft-status" role="status">
               <Paperclip size={12} /> Preparing text attachments…
@@ -1139,7 +1250,7 @@ export default function LiveWorkspace() {
               <button
                 className="aw-send"
                 aria-label="Send message"
-                disabled={!draft.trim() || readingAttachments}
+                disabled={!draft.trim() || readingAttachments || draftConflict}
                 onClick={send}
               >
                 <ArrowUp size={18} />

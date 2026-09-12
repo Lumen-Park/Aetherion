@@ -45,6 +45,7 @@ class MessageFeedback(BaseModel):
 
 class DraftUpdate(BaseModel):
     content: str = Field(default="", max_length=16_000)
+    revision: Optional[int] = Field(default=None, ge=0)
 
 
 class ConversationStore:
@@ -93,10 +94,18 @@ class ConversationStore:
                 );
                 CREATE TABLE IF NOT EXISTS conversation_drafts (
                     conversation_id TEXT PRIMARY KEY, owner TEXT NOT NULL,
-                    content TEXT NOT NULL DEFAULT '', updated_at REAL NOT NULL,
+                    content TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 0,
+                    updated_at REAL NOT NULL,
                     FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
                 );
                 """)
+            draft_columns = {
+                row["name"] for row in db.execute("PRAGMA table_info(conversation_drafts)")
+            }
+            if "revision" not in draft_columns:
+                db.execute(
+                    "ALTER TABLE conversation_drafts ADD COLUMN revision INTEGER NOT NULL DEFAULT 0"
+                )
 
     @staticmethod
     def _conversation(row, messages=None):
@@ -313,16 +322,23 @@ class ConversationStore:
             if not conversation:
                 return None
             row = db.execute(
-                "SELECT content, updated_at FROM conversation_drafts WHERE conversation_id = ? AND owner = ?",
+                "SELECT content, revision, updated_at FROM conversation_drafts WHERE conversation_id = ? AND owner = ?",
                 (conversation_id, owner),
             ).fetchone()
         return {
             "conversation_id": conversation_id,
             "content": row["content"] if row else "",
+            "revision": row["revision"] if row else 0,
             "updated_at": row["updated_at"] if row else None,
         }
 
-    def set_draft(self, owner: str, conversation_id: str, content: str):
+    def set_draft(
+        self,
+        owner: str,
+        conversation_id: str,
+        content: str,
+        revision: Optional[int] = None,
+    ):
         now = time.time()
         with self._lock, self.connect() as db:
             conversation = db.execute(
@@ -331,24 +347,34 @@ class ConversationStore:
             ).fetchone()
             if not conversation:
                 return None
-            if content.strip():
+            row = db.execute(
+                "SELECT content, revision, updated_at FROM conversation_drafts WHERE conversation_id = ? AND owner = ?",
+                (conversation_id, owner),
+            ).fetchone()
+            current_revision = row["revision"] if row else 0
+            if revision is not None and revision != current_revision:
+                return {
+                    "conflict": True,
+                    "conversation_id": conversation_id,
+                    "content": row["content"] if row else "",
+                    "revision": current_revision,
+                    "updated_at": row["updated_at"] if row else None,
+                }
+            next_revision = current_revision + 1
+            if row:
                 db.execute(
-                    """
-                    INSERT INTO conversation_drafts(conversation_id, owner, content, updated_at)
-                    VALUES (?, ?, ?, ?)
-                    ON CONFLICT(conversation_id) DO UPDATE SET
-                        owner=excluded.owner, content=excluded.content, updated_at=excluded.updated_at
-                    """,
-                    (conversation_id, owner, content, now),
+                    "UPDATE conversation_drafts SET content=?, revision=?, updated_at=? WHERE conversation_id=? AND owner=?",
+                    (content, next_revision, now, conversation_id, owner),
                 )
             else:
                 db.execute(
-                    "DELETE FROM conversation_drafts WHERE conversation_id = ? AND owner = ?",
-                    (conversation_id, owner),
+                    "INSERT INTO conversation_drafts(conversation_id, owner, content, revision, updated_at) VALUES (?, ?, ?, ?, ?)",
+                    (conversation_id, owner, content, next_revision, now),
                 )
         return {
             "conversation_id": conversation_id,
-            "content": content if content.strip() else "",
+            "content": content,
+            "revision": next_revision,
             "updated_at": now,
         }
 
@@ -451,10 +477,20 @@ def update_conversation_draft(
     user=Depends(require_role("operator")),
 ):
     result = get_store().set_draft(
-        owner_id(user), conversation_id, request.content
+        owner_id(user), conversation_id, request.content, request.revision
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    if result.get("conflict"):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Draft changed elsewhere.",
+                "content": result["content"],
+                "revision": result["revision"],
+                "updated_at": result["updated_at"],
+            },
+        )
     return result
 
 
