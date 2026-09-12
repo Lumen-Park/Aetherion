@@ -135,9 +135,12 @@ def test_conversation_replays_bounded_activity_events(client):
         "message.finished",
     ]
     assert "content" not in events[-1]["payload"]
-    assert client.get(
-        f"/api/conversations/{cid}", headers=headers("bob")
-    ).status_code == 404
+    assert (
+        client.get(
+            f"/api/conversations/{cid}", headers=headers("bob")
+        ).status_code
+        == 404
+    )
 
 
 def test_profile_is_owner_scoped_and_persistent(client):
