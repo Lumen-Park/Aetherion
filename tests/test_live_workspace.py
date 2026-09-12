@@ -444,6 +444,50 @@ def test_council_persists_seven_votes_and_security_veto(client, monkeypatch):
     events = get_store().events(cid, 0)
     assert sum(event["event"] == "council.vote" for event in events) == 7
     assert any(event["event"] == "council.verdict" for event in events)
+    decision = client.patch(
+        f"/api/conversations/{cid}/messages/{result['id']}/council-decision",
+        headers=headers(),
+        json={"value": "reject"},
+    )
+    assert decision.status_code == 200
+    assert decision.json()["council"]["human_decision"] == "reject"
+    saved = client.get(f"/api/conversations/{cid}", headers=headers()).json()
+    assert saved["messages"][-1]["metadata"]["council"]["approval_required"] is False
+    assert (
+        client.patch(
+            f"/api/conversations/{cid}/messages/{result['id']}/council-decision",
+            headers=headers(),
+            json={"value": "approve"},
+        ).status_code
+        == 422
+    )
+    assert any(event["event"] == "council.human_decision" for event in get_store().events(cid, 0))
+
+
+def test_council_human_approval_can_be_recorded(client):
+    cid = create(client)
+    owner = owner_id(AuthManager().verify_api_key("alice"))
+    assistant = get_store().add_message(
+        owner,
+        cid,
+        "assistant",
+        "Council answer",
+        metadata={
+            "status": "completed",
+            "council": {
+                "decision": "approve",
+                "security_veto": False,
+                "approval_required": True,
+            },
+        },
+    )
+    response = client.patch(
+        f"/api/conversations/{cid}/messages/{assistant['id']}/council-decision",
+        headers=headers(),
+        json={"value": "approve"},
+    )
+    assert response.status_code == 200
+    assert response.json()["council"]["human_decision"] == "approve"
 
 
 def test_provider_failure_is_never_demo(client, monkeypatch):

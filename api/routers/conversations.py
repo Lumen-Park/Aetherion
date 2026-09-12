@@ -43,6 +43,10 @@ class MessageFeedback(BaseModel):
     value: Optional[str] = Field(default=None, pattern="^(up|down)$")
 
 
+class CouncilDecision(BaseModel):
+    value: str = Field(pattern="^(approve|revise|reject)$")
+
+
 class DraftUpdate(BaseModel):
     content: str = Field(default="", max_length=16_000)
     revision: Optional[int] = Field(default=None, ge=0)
@@ -313,6 +317,51 @@ class ConversationStore:
             )
         return True, value
 
+    def set_council_decision(
+        self,
+        owner: str,
+        conversation_id: str,
+        message_id: str,
+        value: str,
+    ):
+        now = time.time()
+        with self._lock, self.connect() as db:
+            row = db.execute(
+                """
+                SELECT m.role, m.metadata
+                FROM messages AS m
+                JOIN conversations AS c ON c.id = m.conversation_id
+                WHERE m.id = ? AND m.conversation_id = ? AND c.owner = ?
+                """,
+                (message_id, conversation_id, owner),
+            ).fetchone()
+            if not row or row["role"] != "assistant":
+                return None
+            try:
+                metadata = json.loads(row["metadata"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                metadata = {}
+            council = metadata.get("council")
+            if not isinstance(council, dict):
+                return None
+            if council.get("security_veto") and value == "approve":
+                raise ValueError("Security veto prevents approval")
+            council["human_decision"] = value
+            council["human_decision_at"] = now
+            council["approval_required"] = False
+            metadata["council"] = council
+            db.execute(
+                "UPDATE messages SET metadata=? WHERE id=? AND conversation_id=?",
+                (json.dumps(metadata), message_id, conversation_id),
+            )
+        result = {"message_id": message_id, "council": council}
+        self.emit(
+            conversation_id,
+            "council.human_decision",
+            {**result, "value": value},
+        )
+        return result
+
     def get_draft(self, owner: str, conversation_id: str):
         with self.connect() as db:
             conversation = db.execute(
@@ -507,6 +556,26 @@ def update_message_feedback(
     if not found:
         raise HTTPException(status_code=404, detail="Assistant message not found")
     return {"message_id": message_id, "feedback": value}
+
+
+@router.patch(
+    "/conversations/{conversation_id}/messages/{message_id}/council-decision"
+)
+def update_council_decision(
+    conversation_id: str,
+    message_id: str,
+    request: CouncilDecision,
+    user=Depends(require_role("operator")),
+):
+    try:
+        result = get_store().set_council_decision(
+            owner_id(user), conversation_id, message_id, request.value
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if not result:
+        raise HTTPException(status_code=404, detail="Council verdict not found")
+    return result
 
 
 @router.patch("/conversations/{conversation_id}")

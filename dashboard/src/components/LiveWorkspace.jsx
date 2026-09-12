@@ -97,6 +97,7 @@ export default function LiveWorkspace() {
   const [feedback, setFeedback] = useState({});
   const [agents, setAgents] = useState([]);
   const [council, setCouncil] = useState(null);
+  const [councilAction, setCouncilAction] = useState(null);
   const [drawer, setDrawer] = useState(false),
     [connected, setConnected] = useState(false);
   const [syncState, setSyncState] = useState("syncing");
@@ -420,6 +421,17 @@ export default function LiveWorkspace() {
                   `Run ${data.status}`,
                 ]);
               if (event[1] === "council.verdict") setCouncil(data);
+              if (event[1] === "council.human_decision") {
+                setCouncil((current) =>
+                  current
+                    ? {
+                        ...current,
+                        human_decision: data.value,
+                        approval_required: false,
+                      }
+                    : current,
+                );
+              }
               if (event[1] === "mission.error") setNotice(data.detail);
               if (id) cursor = Math.max(cursor, Number(id[1]));
             }
@@ -597,6 +609,41 @@ export default function LiveWorkspace() {
       });
       setNotice(error.message);
     });
+  };
+  const setCouncilDecision = async (messageId, value) => {
+    setCouncilAction(`${messageId}:${value}`);
+    try {
+      const response = await request(
+        `/conversations/${active}/messages/${messageId}/council-decision`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ value }),
+        },
+      );
+      const data = await response.json();
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                metadata: { ...message.metadata, council: data.council },
+              }
+            : message,
+        ),
+      );
+      setCouncil(data.council);
+      setNotice(
+        value === "approve"
+          ? "Council decision approved and recorded."
+          : value === "reject"
+            ? "Council decision rejected and recorded."
+            : "Revision requested from the Council.",
+      );
+    } catch (error) {
+      setNotice(error.message);
+    } finally {
+      setCouncilAction(null);
+    }
   };
   const stop = async () => {
     if (!active) return;
@@ -995,9 +1042,11 @@ export default function LiveWorkspace() {
                       {message.metadata.council.revisions} revise
                     </span>
                     <span>
-                      {message.metadata.council.security_veto
-                        ? "Security veto"
-                        : "Approval required"}
+                      {message.metadata.council.human_decision
+                        ? `Human ${message.metadata.council.human_decision}`
+                        : message.metadata.council.security_veto
+                          ? "Security veto"
+                          : "Approval required"}
                     </span>
                   </footer>
                   <div className="aw-live-vote-list">
@@ -1011,6 +1060,52 @@ export default function LiveWorkspace() {
                       </div>
                     ))}
                   </div>
+                  {message.metadata.council.approval_required && (
+                    <div className="aw-council-checkpoint">
+                      <div>
+                        <strong>Operator checkpoint</strong>
+                        <span>
+                          Record a human decision before this advisory verdict
+                          is acted on.
+                        </span>
+                      </div>
+                      <div className="aw-council-checkpoint-actions">
+                        <button
+                          type="button"
+                          disabled={Boolean(councilAction)}
+                          onClick={() =>
+                            setCouncilDecision(message.id, "approve")
+                          }
+                        >
+                          {councilAction === `${message.id}:approve`
+                            ? "Saving…"
+                            : "Approve"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(councilAction)}
+                          onClick={() =>
+                            setCouncilDecision(message.id, "revise")
+                          }
+                        >
+                          {councilAction === `${message.id}:revise`
+                            ? "Saving…"
+                            : "Request revision"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(councilAction)}
+                          onClick={() =>
+                            setCouncilDecision(message.id, "reject")
+                          }
+                        >
+                          {councilAction === `${message.id}:reject`
+                            ? "Saving…"
+                            : "Reject"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </section>
               )}
               {message.content && (

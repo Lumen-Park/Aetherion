@@ -2521,9 +2521,72 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.aw-council-checkpoint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 11px 12px;
+  border: 1px solid #d2b86b55;
+  border-radius: 9px;
+  background: linear-gradient(110deg, #c09e4518, #12211eaa);
+  box-shadow: inset 0 1px #ffffff0d;
+}
+.aw-council-checkpoint > div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.aw-council-checkpoint strong {
+  color: #f0db9c;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.aw-council-checkpoint span {
+  color: #aab29f;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.aw-council-checkpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+.aw-council-checkpoint-actions button {
+  border: 1px solid #cbb77655;
+  border-radius: 7px;
+  padding: 6px 8px;
+  color: #e2dec6;
+  background: #ffffff08;
+  font-size: 8px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+.aw-council-checkpoint-actions button:hover:not(:disabled) {
+  border-color: #e4ce8b99;
+  background: #e4ce8b18;
+  transform: translateY(-1px);
+}
+.aw-council-checkpoint-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
 @media (max-width: 560px) {
   .aw-live-vote-list {
     grid-template-columns: 1fr;
+  }
+  .aw-council-checkpoint {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .aw-council-checkpoint-actions {
+    justify-content: flex-start;
   }
 }
 
