@@ -628,6 +628,11 @@ def test_allowlisted_research_sources_are_cited_and_persisted(
     ]
     assert messages[-1]["metadata"]["sources"][-1]["status"] == "retrieved"
     assert "[Source: Aetherion guide]" in captured["messages"][-1]["content"]
+    assert any(
+        event["event"] == "research.source"
+        and json.loads(event["payload"])["status"] == "retrieved"
+        for event in get_store().events(cid, 0)
+    )
 
 
 def test_research_sources_fail_closed_without_allowlist(client, monkeypatch):

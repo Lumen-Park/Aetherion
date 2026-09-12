@@ -340,6 +340,25 @@ async def execute(
                 )
                 web_contexts, web_sources = await fetch_research_sources(source_urls)
                 sources.extend(web_sources)
+                for source in web_sources:
+                    store.emit(
+                        conversation_id,
+                        "research.source",
+                        {
+                            key: source[key]
+                            for key in (
+                                "id",
+                                "url",
+                                "domain",
+                                "title",
+                                "status",
+                                "chars",
+                                "error",
+                            )
+                            if key in source
+                        }
+                        | {"run_id": run_id},
+                    )
                 store.emit(
                     conversation_id,
                     "agent.completed",

@@ -136,6 +136,11 @@ const replayWorkspaceEvents = (events = []) => {
         approval_required: false,
       };
       activity.push(`Human decision: ${data.value}`);
+    } else if (event === "research.source") {
+      const label = data.title || data.domain || data.url || "Source";
+      activity.push(
+        `Research · ${label}: ${data.status === "retrieved" ? "retrieved" : "blocked"}`,
+      );
     } else if (event === "message.finished") {
       activity.push(`Run ${data.status || "completed"}`);
     } else if (event === "mission.error") {
@@ -574,6 +579,13 @@ export default function LiveWorkspace() {
                       }
                     : current,
                 );
+              }
+              if (event[1] === "research.source") {
+                const label = data.title || data.domain || data.url || "Source";
+                setActivity((items) => [
+                  ...items.slice(-19),
+                  `Research · ${label}: ${data.status === "retrieved" ? "retrieved" : "blocked"}`,
+                ]);
               }
               if (event[1] === "mission.error") setNotice(data.detail);
               if (id) cursor = Math.max(cursor, Number(id[1]));
