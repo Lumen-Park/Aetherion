@@ -17,9 +17,12 @@ import { IconButton, download } from "./WorkspaceParts";
 import "./workspace-premium.css";
 
 const origin = (import.meta.env.VITE_API_ORIGIN || "").replace(/\/$/, "");
+const ACTIVE_CONVERSATION_KEY = "aetherion_live_active_conversation";
 export default function LiveWorkspace() {
   const [chats, setChats] = useState([]),
-    [active, setActive] = useState(null);
+    [active, setActive] = useState(
+      () => localStorage.getItem(ACTIVE_CONVERSATION_KEY) || null,
+    );
   const [messages, setMessages] = useState([]),
     [draft, setDraft] = useState("");
   const [mode, setMode] = useState("quick"),
@@ -30,6 +33,7 @@ export default function LiveWorkspace() {
   const [council, setCouncil] = useState(null);
   const [drawer, setDrawer] = useState(false),
     [connected, setConnected] = useState(false);
+  const [syncState, setSyncState] = useState("syncing");
   const selection = useRef(null),
     submitting = useRef(false);
   const token =
@@ -55,14 +59,28 @@ export default function LiveWorkspace() {
     return response;
   };
   const list = async () => {
+    setSyncState("syncing");
     const data = await (await request("/conversations")).json();
     setChats(data.conversations);
     setConnected(true);
+    setSyncState("connected");
+    setActive((current) => {
+      const preferred =
+        current || localStorage.getItem(ACTIVE_CONVERSATION_KEY);
+      if (preferred && data.conversations.some((chat) => chat.id === preferred))
+        return preferred;
+      return data.conversations[0]?.id || null;
+    });
   };
+  useEffect(() => {
+    if (active) localStorage.setItem(ACTIVE_CONVERSATION_KEY, active);
+    else localStorage.removeItem(ACTIVE_CONVERSATION_KEY);
+  }, [active]);
   useEffect(() => {
     list().catch((e) => {
       setNotice(e.message);
       setConnected(false);
+      setSyncState("offline");
     });
   }, []);
   useEffect(() => {
@@ -88,6 +106,8 @@ export default function LiveWorkspace() {
       ).json();
       if (selection.current !== active) return;
       setMessages(chat.messages);
+      setConnected(true);
+      setSyncState("connected");
       const latestCouncil = [...chat.messages]
         .reverse()
         .find((message) => message.metadata?.council)?.metadata?.council;
@@ -166,6 +186,7 @@ export default function LiveWorkspace() {
         } catch (error) {
           if (controller.signal.aborted) return;
           setConnected(false);
+          setSyncState("reconnecting");
           setNotice(error.message + " Reconnecting…");
         }
         await new Promise((resolve) => {
@@ -268,7 +289,13 @@ export default function LiveWorkspace() {
           ))}
         </div>
         <div className="aw-preview-note">
-          <span>{connected ? "SERVER CONNECTED" : "CONNECTING"}</span>
+          <span>
+            {connected && syncState === "connected"
+              ? "SERVER SYNCED"
+              : syncState === "offline"
+                ? "OFFLINE"
+                : "SYNCING"}
+          </span>
           <p>
             Conversations are stored on your Aetherion server. Voice transcripts
             wait for your review.
@@ -288,7 +315,19 @@ export default function LiveWorkspace() {
               {chats.find((c) => c.id === active)?.title || "New conversation"}
             </b>
           </div>
-          <span className="aw-preview-badge">Live model · advisory</span>
+          <span
+            className={`aw-preview-badge aw-sync-badge ${syncState}`}
+            aria-live="polite"
+          >
+            <i />
+            {syncState === "connected"
+              ? "Cloud synced · advisory"
+              : syncState === "reconnecting"
+                ? "Reconnecting…"
+                : syncState === "offline"
+                  ? "Offline · retrying"
+                  : "Syncing workspace…"}
+          </span>
         </header>
         <div
           className="aw-message-scroll"

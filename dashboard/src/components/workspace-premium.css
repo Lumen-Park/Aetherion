@@ -2494,6 +2494,41 @@
     0 0 20px #92b49d12,
     0 1px 0 #ffffff0c inset;
 }
+.aw-sync-badge {
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease,
+    background 0.25s ease;
+}
+.aw-sync-badge > i {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #91c8a7;
+  box-shadow: 0 0 10px #91c8a7aa;
+}
+.aw-sync-badge.reconnecting,
+.aw-sync-badge.syncing {
+  color: #c6b889;
+  border-color: #c6b88935;
+  background: #c6b8890b;
+}
+.aw-sync-badge.reconnecting > i,
+.aw-sync-badge.syncing > i {
+  background: #d1b975;
+  box-shadow: 0 0 10px #d1b975aa;
+  animation: aw-pulse 1.3s ease-in-out infinite;
+}
+.aw-sync-badge.offline {
+  color: #d38d83;
+  border-color: #d38d8338;
+  background: #d38d830b;
+}
+.aw-sync-badge.offline > i {
+  background: #d38d83;
+  box-shadow: 0 0 10px #d38d83aa;
+}
 .aw-composer-toolbar select {
   box-shadow:
     0 5px 18px #0003,
