@@ -148,6 +148,8 @@ export default function LiveWorkspace() {
   const [artifactDraft, setArtifactDraft] = useState("");
   const [artifactEditing, setArtifactEditing] = useState(false);
   const [artifactSync, setArtifactSync] = useState("cloud");
+  const [artifactVersions, setArtifactVersions] = useState([]);
+  const [artifactVersionChoice, setArtifactVersionChoice] = useState("");
   const selection = useRef(null),
     submitting = useRef(false),
     composer = useRef(null),
@@ -206,6 +208,8 @@ export default function LiveWorkspace() {
   useEffect(() => {
     setArtifactPanel(null);
     setArtifactEditing(false);
+    setArtifactVersions([]);
+    setArtifactVersionChoice("");
   }, [active]);
   const getDraftCache = () => {
     if (!draftCache.current) draftCache.current = readDraftCache();
@@ -761,6 +765,8 @@ export default function LiveWorkspace() {
     setCouncil(null);
     setArtifactPanel(null);
     setArtifactEditing(false);
+    setArtifactVersions([]);
+    setArtifactVersionChoice("");
     setPaletteOpen(false);
     setDrawer(false);
   };
@@ -861,14 +867,20 @@ export default function LiveWorkspace() {
     setArtifactPanel(artifact);
     setArtifactDraft("");
     setArtifactEditing(false);
+    setArtifactVersionChoice("");
     setArtifactSync("syncing");
     try {
-      const response = await request(
-        `/conversations/${active}/artifacts/${artifact.id}`,
-      );
-      const saved = await response.json();
+      const [artifactResponse, versionsResponse] = await Promise.all([
+        request(`/conversations/${active}/artifacts/${artifact.id}`),
+        request(`/conversations/${active}/artifacts/${artifact.id}/versions`),
+      ]);
+      const [saved, versionData] = await Promise.all([
+        artifactResponse.json(),
+        versionsResponse.json(),
+      ]);
       setArtifactPanel(saved);
       setArtifactDraft(saved.content);
+      setArtifactVersions(versionData.versions || []);
       setArtifactSync("cloud");
     } catch (error) {
       setArtifactSync("offline");
@@ -894,6 +906,17 @@ export default function LiveWorkspace() {
       const saved = await response.json();
       setArtifactPanel(saved);
       setArtifactDraft(saved.content);
+      setArtifactVersions((current) => [
+        {
+          id: saved.id,
+          artifact_id: saved.id,
+          title: saved.title,
+          mime_type: saved.mime_type,
+          revision: saved.revision,
+          created_at: saved.updated_at,
+        },
+        ...current.filter((item) => item.revision !== saved.revision),
+      ]);
       setArtifactEditing(false);
       setArtifactSync("cloud");
       setMessages((current) =>
@@ -934,6 +957,26 @@ export default function LiveWorkspace() {
       }
     } finally {
       artifactSaveRevision.current = 0;
+    }
+  };
+  const restoreArtifactVersion = async (revision) => {
+    if (!artifactPanel || !revision) return;
+    setArtifactVersionChoice(String(revision));
+    try {
+      const response = await request(
+        `/conversations/${active}/artifacts/${artifactPanel.id}/versions/${revision}`,
+      );
+      const version = await response.json();
+      setArtifactDraft(version.content);
+      setArtifactEditing(true);
+      setArtifactSync("cloud");
+      setNotice(
+        `Revision ${revision} loaded. Save it to create a new workspace revision.`,
+      );
+    } catch (error) {
+      setNotice(`Revision unavailable: ${error.message}`);
+    } finally {
+      setArtifactVersionChoice("");
     }
   };
   const startRename = (chat) => {
@@ -1668,6 +1711,24 @@ export default function LiveWorkspace() {
                 </IconButton>
               </div>
             </div>
+            {artifactVersions.length > 1 && (
+              <select
+                className="aw-artifact-version"
+                aria-label="Artifact revision history"
+                value={artifactVersionChoice}
+                onChange={(event) => restoreArtifactVersion(event.target.value)}
+              >
+                <option value="">Revision history</option>
+                {artifactVersions.map((version) => (
+                  <option key={version.revision} value={version.revision}>
+                    Revision {version.revision}
+                    {version.revision === artifactPanel.revision
+                      ? " · current"
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            )}
             <span className="aw-artifact-status">
               {artifactSync === "syncing"
                 ? "Loading from workspace…"

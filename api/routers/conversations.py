@@ -137,7 +137,42 @@ class ConversationStore:
                 );
                 CREATE INDEX IF NOT EXISTS artifacts_owner_conversation
                     ON conversation_artifacts(owner, conversation_id, updated_at DESC);
+                CREATE TABLE IF NOT EXISTS conversation_artifact_versions (
+                    id TEXT PRIMARY KEY, artifact_id TEXT NOT NULL,
+                    owner TEXT NOT NULL, conversation_id TEXT NOT NULL,
+                    title TEXT NOT NULL, mime_type TEXT NOT NULL,
+                    content TEXT NOT NULL, revision INTEGER NOT NULL,
+                    created_at REAL NOT NULL,
+                    UNIQUE(artifact_id, revision),
+                    FOREIGN KEY(artifact_id) REFERENCES conversation_artifacts(id) ON DELETE CASCADE,
+                    FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS artifact_versions_lookup
+                    ON conversation_artifact_versions(owner, conversation_id, artifact_id, revision DESC);
                 """)
+            artifact_rows = db.execute(
+                "SELECT id, owner, conversation_id, title, mime_type, content, revision, created_at FROM conversation_artifacts"
+            ).fetchall()
+            for artifact in artifact_rows:
+                db.execute(
+                    """
+                    INSERT OR IGNORE INTO conversation_artifact_versions(
+                        id, artifact_id, owner, conversation_id, title, mime_type,
+                        content, revision, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(uuid.uuid4()),
+                        artifact["id"],
+                        artifact["owner"],
+                        artifact["conversation_id"],
+                        artifact["title"],
+                        artifact["mime_type"],
+                        artifact["content"],
+                        artifact["revision"],
+                        artifact["created_at"],
+                    ),
+                )
             draft_columns = {
                 row["name"] for row in db.execute("PRAGMA table_info(conversation_drafts)")
             }
@@ -525,6 +560,24 @@ class ConversationStore:
                     now,
                 ),
             )
+            db.execute(
+                """
+                INSERT INTO conversation_artifact_versions(
+                    id, artifact_id, owner, conversation_id, title, mime_type,
+                    content, revision, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+                """,
+                (
+                    str(uuid.uuid4()),
+                    artifact_id,
+                    owner,
+                    conversation_id,
+                    title.strip() or "Aetherion brief",
+                    mime_type,
+                    content,
+                    now,
+                ),
+            )
             row = db.execute(
                 "SELECT * FROM conversation_artifacts WHERE id=?", (artifact_id,)
             ).fetchone()
@@ -608,10 +661,55 @@ class ConversationStore:
             saved = db.execute(
                 "SELECT * FROM conversation_artifacts WHERE id=?", (artifact_id,)
             ).fetchone()
+            db.execute(
+                """
+                INSERT INTO conversation_artifact_versions(
+                    id, artifact_id, owner, conversation_id, title, mime_type,
+                    content, revision, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    str(uuid.uuid4()),
+                    artifact_id,
+                    owner,
+                    conversation_id,
+                    saved["title"],
+                    saved["mime_type"],
+                    saved["content"],
+                    saved["revision"],
+                    now,
+                ),
+            )
         artifact = self._artifact(saved)
         artifact.pop("owner", None)
         self.emit(conversation_id, "artifact.updated", artifact)
         return artifact
+
+    def list_artifact_versions(self, owner: str, conversation_id: str, artifact_id: str):
+        with self.connect() as db:
+            rows = db.execute(
+                """
+                SELECT id, artifact_id, title, mime_type, revision, created_at
+                FROM conversation_artifact_versions
+                WHERE owner=? AND conversation_id=? AND artifact_id=?
+                ORDER BY revision DESC
+                """,
+                (owner, conversation_id, artifact_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_artifact_version(
+        self, owner: str, conversation_id: str, artifact_id: str, revision: int
+    ):
+        with self.connect() as db:
+            row = db.execute(
+                """
+                SELECT * FROM conversation_artifact_versions
+                WHERE owner=? AND conversation_id=? AND artifact_id=? AND revision=?
+                """,
+                (owner, conversation_id, artifact_id, revision),
+            ).fetchone()
+        return dict(row) if row else None
 
     def set_draft(
         self,
@@ -760,6 +858,36 @@ def get_conversation_artifact(
     result = get_store().get_artifact(owner_id(user), conversation_id, artifact_id)
     if not result:
         raise HTTPException(status_code=404, detail="Artifact not found")
+    return result
+
+
+@router.get("/conversations/{conversation_id}/artifacts/{artifact_id}/versions")
+def list_conversation_artifact_versions(
+    conversation_id: str, artifact_id: str, user=Depends(get_current_user)
+):
+    store, owner = get_store(), owner_id(user)
+    if not store.get_artifact(owner, conversation_id, artifact_id):
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    return {
+        "versions": store.list_artifact_versions(owner, conversation_id, artifact_id)
+    }
+
+
+@router.get(
+    "/conversations/{conversation_id}/artifacts/{artifact_id}/versions/{revision}"
+)
+def get_conversation_artifact_version(
+    conversation_id: str,
+    artifact_id: str,
+    revision: int,
+    user=Depends(get_current_user),
+):
+    result = get_store().get_artifact_version(
+        owner_id(user), conversation_id, artifact_id, revision
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Artifact version not found")
+    result.pop("owner", None)
     return result
 
 

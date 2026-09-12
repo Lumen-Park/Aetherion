@@ -1876,6 +1876,20 @@
   color: #93a17f;
   margin: 10px 0 20px;
 }
+.aw-artifact-version {
+  width: 100%;
+  margin-top: 18px;
+  border: 1px solid #a5b68d25;
+  border-radius: 6px;
+  padding: 9px 11px;
+  background: #0e140f;
+  color: #c9d0b9;
+  font-size: 10px;
+}
+.aw-artifact-version:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
 .aw-artifact-editor {
   width: 100%;
   min-height: 500px;

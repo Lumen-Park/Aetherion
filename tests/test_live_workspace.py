@@ -178,6 +178,10 @@ def test_research_answer_creates_owner_scoped_editable_artifact(
     assert (
         artifact.json()["content"] == "# Evidence brief\n\nA bounded finding."
     )
+    versions_url = artifact_url + "/versions"
+    versions = client.get(versions_url, headers=headers())
+    assert versions.status_code == 200
+    assert [item["revision"] for item in versions.json()["versions"]] == [1]
     assert (
         client.get(
             f"/api/conversations/{cid}/artifacts", headers=headers()
@@ -195,6 +199,14 @@ def test_research_answer_creates_owner_scoped_editable_artifact(
     )
     assert saved.status_code == 200
     assert saved.json()["revision"] == 2
+    versions = client.get(versions_url, headers=headers()).json()["versions"]
+    assert [item["revision"] for item in versions] == [2, 1]
+    assert client.get(versions_url + "/1", headers=headers()).json()["content"] == (
+        "# Evidence brief\n\nA bounded finding."
+    )
+    assert client.get(versions_url + "/2", headers=headers()).json()["content"] == (
+        "# Reviewed\n\nHuman edit."
+    )
     conflict = client.put(
         artifact_url,
         headers=headers(),
