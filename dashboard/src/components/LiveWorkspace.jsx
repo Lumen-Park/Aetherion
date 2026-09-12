@@ -71,6 +71,7 @@ export default function LiveWorkspace() {
   const [drawer, setDrawer] = useState(false),
     [connected, setConnected] = useState(false);
   const [syncState, setSyncState] = useState("syncing");
+  const [draftSyncState, setDraftSyncState] = useState("local");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const selection = useRef(null),
     submitting = useRef(false),
@@ -78,7 +79,10 @@ export default function LiveWorkspace() {
     palette = useRef(null),
     fileInput = useRef(null),
     historySearch = useRef(null),
-    draftCache = useRef(null);
+    draftCache = useRef(null),
+    draftValue = useRef(""),
+    draftSaveTimer = useRef(null),
+    draftRevision = useRef(0);
   const token =
     localStorage.getItem("aetherion_token") ||
     sessionStorage.getItem("aetherion_token");
@@ -123,20 +127,85 @@ export default function LiveWorkspace() {
     if (!draftCache.current) draftCache.current = readDraftCache();
     return draftCache.current;
   };
+  const saveDraftCacheFor = (key, content) => {
+    const cache = getDraftCache();
+    if (content.trim()) cache[key] = content;
+    else delete cache[key];
+    writeDraftCache(cache);
+  };
+  const scheduleCloudDraftSave = (conversationId, content) => {
+    clearTimeout(draftSaveTimer.current);
+    if (!conversationId) {
+      setDraftSyncState("local");
+      return;
+    }
+    const revision = draftRevision.current;
+    setDraftSyncState("saving");
+    draftSaveTimer.current = setTimeout(() => {
+      request(`/conversations/${conversationId}/draft`, {
+        method: "PUT",
+        body: JSON.stringify({ content }),
+      })
+        .then(() => {
+          if (revision === draftRevision.current) setDraftSyncState("cloud");
+        })
+        .catch((error) => {
+          if (revision !== draftRevision.current) return;
+          setDraftSyncState("local");
+          setNotice(`Draft sync paused: ${error.message}`);
+        });
+    }, 450);
+  };
   const updateDraft = (value) => {
-    setDraft((current) => {
-      const next = typeof value === "function" ? value(current) : value;
-      const cache = getDraftCache();
-      const key = active || NEW_DRAFT_KEY;
-      if (next.trim()) cache[key] = next;
-      else delete cache[key];
-      writeDraftCache(cache);
-      return next;
-    });
+    const next =
+      typeof value === "function" ? value(draftValue.current) : value;
+    draftValue.current = next;
+    draftRevision.current += 1;
+    saveDraftCacheFor(active || NEW_DRAFT_KEY, next);
+    setDraft(next);
+    scheduleCloudDraftSave(active, next);
+  };
+  const setDraftForConversation = (conversationId, content) => {
+    draftValue.current = content;
+    draftRevision.current += 1;
+    saveDraftCacheFor(conversationId || NEW_DRAFT_KEY, content);
+    setDraft(content);
+    scheduleCloudDraftSave(conversationId, content);
   };
   useEffect(() => {
+    clearTimeout(draftSaveTimer.current);
+    draftRevision.current += 1;
+    const revision = draftRevision.current;
     const cache = getDraftCache();
-    setDraft(cache[active || NEW_DRAFT_KEY] || "");
+    const localDraft = cache[active || NEW_DRAFT_KEY] || "";
+    draftValue.current = localDraft;
+    setDraft(localDraft);
+    setDraftSyncState(active ? "syncing" : "local");
+    if (!active) return undefined;
+    const controller = new AbortController();
+    request(`/conversations/${active}/draft`, { signal: controller.signal })
+      .then((response) => response.json())
+      .then((data) => {
+        if (controller.signal.aborted || revision !== draftRevision.current)
+          return;
+        const content = data.content || localDraft;
+        draftValue.current = content;
+        saveDraftCacheFor(active, content);
+        setDraft(content);
+        if (data.content) setDraftSyncState("cloud");
+        else if (localDraft) scheduleCloudDraftSave(active, localDraft);
+        else setDraftSyncState("cloud");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted || revision !== draftRevision.current)
+          return;
+        setDraftSyncState("local");
+        if (localDraft) setNotice(`Using local draft: ${error.message}`);
+      });
+    return () => {
+      controller.abort();
+      clearTimeout(draftSaveTimer.current);
+    };
   }, [active]);
   useEffect(() => {
     list().catch((e) => {
@@ -379,11 +448,8 @@ export default function LiveWorkspace() {
           }),
         })
       ).json();
-      const cache = getDraftCache();
-      cache[chat.id] = source.content;
-      writeDraftCache(cache);
       setActive(chat.id);
-      setDraft(source.content);
+      setDraftForConversation(chat.id, source.content);
       setAttachments([]);
       await list();
       setNotice(
@@ -475,6 +541,13 @@ export default function LiveWorkspace() {
   const visibleChats = chats.filter((chat) =>
     chat.title.toLowerCase().includes(chatQuery.trim().toLowerCase()),
   );
+  const draftStatus =
+    {
+      syncing: "Loading workspace draft…",
+      saving: "Saving draft to workspace…",
+      cloud: "Draft synced to workspace",
+      local: "Draft saved on this device",
+    }[draftSyncState] || "Draft saved on this device";
   useEffect(() => {
     setHistoryCursor((current) =>
       visibleChats.length
@@ -965,7 +1038,7 @@ export default function LiveWorkspace() {
           />
           {draft.trim() && (
             <div className="aw-draft-status" role="status">
-              <Check size={12} /> Draft saved on this device
+              <Check size={12} /> {draftStatus}
             </div>
           )}
           <div className="aw-composer-toolbar">

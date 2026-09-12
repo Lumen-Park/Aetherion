@@ -198,6 +198,42 @@ def test_conversation_rename_and_delete_are_authenticated(client):
     )
 
 
+def test_draft_sync_persists_and_clears_per_conversation(client):
+    cid = create(client)
+    draft_url = f"/api/conversations/{cid}/draft"
+    assert client.get(draft_url, headers=headers()).json()["content"] == ""
+    saved = client.put(
+        draft_url,
+        headers=headers(),
+        json={"content": "Continue this mission tomorrow."},
+    )
+    assert saved.status_code == 200
+    assert saved.json()["content"] == "Continue this mission tomorrow."
+    assert client.get(draft_url, headers=headers()).json()["content"] == (
+        "Continue this mission tomorrow."
+    )
+    cleared = client.put(draft_url, headers=headers(), json={"content": ""})
+    assert cleared.status_code == 200
+    assert client.get(draft_url, headers=headers()).json()["content"] == ""
+    assert client.get(draft_url, headers=headers("bob")).status_code == 404
+    assert (
+        client.put(
+            draft_url,
+            headers=headers("reader"),
+            json={"content": "Viewer draft"},
+        ).status_code
+        == 403
+    )
+    assert (
+        client.put(
+            draft_url,
+            headers=headers(),
+            json={"content": "x" * 16_001},
+        ).status_code
+        == 422
+    )
+
+
 def test_cancel_keeps_partial_and_blocks_overlap(client, monkeypatch):
     async def provider(messages):
         yield "Partial"

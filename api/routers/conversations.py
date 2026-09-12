@@ -39,6 +39,10 @@ class MessageFeedback(BaseModel):
     value: Optional[str] = Field(default=None, pattern="^(up|down)$")
 
 
+class DraftUpdate(BaseModel):
+    content: str = Field(default="", max_length=16_000)
+
+
 class ConversationStore:
     """Small SQLite event store; safe for multiple API threads and restarts."""
 
@@ -81,6 +85,11 @@ class ConversationStore:
                 CREATE TABLE IF NOT EXISTS conversation_events (
                     sequence INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT NOT NULL,
                     event TEXT NOT NULL, payload TEXT NOT NULL, created_at REAL NOT NULL,
+                    FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS conversation_drafts (
+                    conversation_id TEXT PRIMARY KEY, owner TEXT NOT NULL,
+                    content TEXT NOT NULL DEFAULT '', updated_at REAL NOT NULL,
                     FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
                 );
                 """)
@@ -229,6 +238,54 @@ class ConversationStore:
             )
         return True, value
 
+    def get_draft(self, owner: str, conversation_id: str):
+        with self.connect() as db:
+            conversation = db.execute(
+                "SELECT 1 FROM conversations WHERE id = ? AND owner = ?",
+                (conversation_id, owner),
+            ).fetchone()
+            if not conversation:
+                return None
+            row = db.execute(
+                "SELECT content, updated_at FROM conversation_drafts WHERE conversation_id = ? AND owner = ?",
+                (conversation_id, owner),
+            ).fetchone()
+        return {
+            "conversation_id": conversation_id,
+            "content": row["content"] if row else "",
+            "updated_at": row["updated_at"] if row else None,
+        }
+
+    def set_draft(self, owner: str, conversation_id: str, content: str):
+        now = time.time()
+        with self._lock, self.connect() as db:
+            conversation = db.execute(
+                "SELECT 1 FROM conversations WHERE id = ? AND owner = ?",
+                (conversation_id, owner),
+            ).fetchone()
+            if not conversation:
+                return None
+            if content.strip():
+                db.execute(
+                    """
+                    INSERT INTO conversation_drafts(conversation_id, owner, content, updated_at)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(conversation_id) DO UPDATE SET
+                        owner=excluded.owner, content=excluded.content, updated_at=excluded.updated_at
+                    """,
+                    (conversation_id, owner, content, now),
+                )
+            else:
+                db.execute(
+                    "DELETE FROM conversation_drafts WHERE conversation_id = ? AND owner = ?",
+                    (conversation_id, owner),
+                )
+        return {
+            "conversation_id": conversation_id,
+            "content": content if content.strip() else "",
+            "updated_at": now,
+        }
+
     def emit(self, conversation_id: str, event: str, payload: Dict[str, Any]):
         with self._lock, self.connect() as db:
             cursor = db.execute(
@@ -309,6 +366,28 @@ def create_conversation(
 def get_conversation(conversation_id: str, user=Depends(get_current_user)):
     result = get_store().get(owner_id(user), conversation_id)
     if not result:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return result
+
+
+@router.get("/conversations/{conversation_id}/draft")
+def get_conversation_draft(conversation_id: str, user=Depends(get_current_user)):
+    result = get_store().get_draft(owner_id(user), conversation_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return result
+
+
+@router.put("/conversations/{conversation_id}/draft")
+def update_conversation_draft(
+    conversation_id: str,
+    request: DraftUpdate,
+    user=Depends(require_role("operator")),
+):
+    result = get_store().set_draft(
+        owner_id(user), conversation_id, request.content
+    )
+    if result is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return result
 
