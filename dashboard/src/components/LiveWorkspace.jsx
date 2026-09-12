@@ -28,6 +28,7 @@ export default function LiveWorkspace() {
     [active, setActive] = useState(
       () => localStorage.getItem(ACTIVE_CONVERSATION_KEY) || null,
     );
+  const [chatQuery, setChatQuery] = useState("");
   const [messages, setMessages] = useState([]),
     [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState([]),
@@ -46,7 +47,8 @@ export default function LiveWorkspace() {
     submitting = useRef(false),
     composer = useRef(null),
     palette = useRef(null),
-    fileInput = useRef(null);
+    fileInput = useRef(null),
+    historySearch = useRef(null);
   const token =
     localStorage.getItem("aetherion_token") ||
     sessionStorage.getItem("aetherion_token");
@@ -300,6 +302,13 @@ export default function LiveWorkspace() {
         event.preventDefault();
         setPaletteOpen((open) => !open);
       }
+      if (
+        event.key === "/" &&
+        !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)
+      ) {
+        event.preventDefault();
+        historySearch.current?.focus();
+      }
       if (event.key === "Escape") {
         if (paletteOpen) setPaletteOpen(false);
         else if (busy) stop();
@@ -314,6 +323,9 @@ export default function LiveWorkspace() {
   const latest = [...messages]
     .reverse()
     .find((m) => m.role === "assistant" && m.metadata?.status !== "running");
+  const visibleChats = chats.filter((chat) =>
+    chat.title.toLowerCase().includes(chatQuery.trim().toLowerCase()),
+  );
   return (
     <div className="aw">
       <aside
@@ -330,19 +342,47 @@ export default function LiveWorkspace() {
         <button className="aw-new" onClick={newConversation}>
           <Plus size={18} /> New conversation
         </button>
-        <div className="aw-history">
-          {chats.map((chat) => (
+        <label className="aw-live-search">
+          <Search size={14} />
+          <input
+            ref={historySearch}
+            aria-label="Search conversations"
+            placeholder="Search conversations"
+            value={chatQuery}
+            onChange={(event) => setChatQuery(event.target.value)}
+          />
+          {chatQuery ? (
             <button
-              key={chat.id}
-              className="aw-nav"
-              onClick={() => {
-                setActive(chat.id);
-                setDrawer(false);
-              }}
+              type="button"
+              className="aw-live-search-clear"
+              aria-label="Clear conversation search"
+              onClick={() => setChatQuery("")}
             >
-              {chat.title}
+              <X size={12} />
             </button>
-          ))}
+          ) : (
+            <kbd>/</kbd>
+          )}
+        </label>
+        <div className="aw-history">
+          {visibleChats.length ? (
+            visibleChats.map((chat) => (
+              <button
+                key={chat.id}
+                className={`aw-nav ${chat.id === active ? "selected" : ""}`}
+                aria-current={chat.id === active ? "page" : undefined}
+                onClick={() => {
+                  setActive(chat.id);
+                  setDrawer(false);
+                }}
+              >
+                <span className="aw-history-dot" />
+                <span>{chat.title}</span>
+              </button>
+            ))
+          ) : (
+            <p className="aw-live-history-empty">No conversations found.</p>
+          )}
         </div>
         <div className="aw-preview-note">
           <span>
