@@ -17,6 +17,7 @@ from api.routers import (
     conversations,
     council,
     oauth_routes,
+    institution,
     tasks,
     websocket,
 )
@@ -100,6 +101,7 @@ app.include_router(constitution.router, prefix="/api", tags=["Constitution"])
 app.include_router(agent_catalog.router, prefix="/api", tags=["Agent Catalog"])
 app.include_router(compliance.router, prefix="/api", tags=["Compliance"])
 app.include_router(conversations.router, prefix="/api", tags=["Conversations"])
+app.include_router(institution.router, prefix="/api", tags=["Institution"])
 app.include_router(metrics_router, prefix="/api", tags=["Metrics"])
 
 # Serve React static files (after building frontend)

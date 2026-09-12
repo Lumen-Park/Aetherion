@@ -14,6 +14,16 @@ def test_catalog_and_routing():
     assert len(select("physics chemistry biology")) <= 3
 
 
+def test_public_catalog_shape():
+    from api.routers.institution import _public_agent
+
+    item = _public_agent(CATALOG["PhysicistAgent"])
+    assert item["id"] == "PhysicistAgent"
+    assert item["college"] == "Natural Sciences"
+    assert item["version"] == "1.0.0"
+    assert item["advisory_only"] is True
+
+
 @pytest.mark.parametrize("agent_id", list(CATALOG))
 def test_every_specialist_uses_its_own_prompt(agent_id):
     async def provider(messages):
