@@ -221,9 +221,7 @@ def test_provider_failure_is_never_demo(client, monkeypatch):
             headers=headers(),
             json={
                 "content": "Hello",
-                "attachments": [
-                    {"name": "too-large.bin", "size": 20_000_001}
-                ],
+                "attachments": [{"name": "too-large.bin", "size": 20_000_001}],
                 "request_id": str(uuid.uuid4()),
             },
         ).status_code
