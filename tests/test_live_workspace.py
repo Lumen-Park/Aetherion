@@ -111,6 +111,35 @@ def test_readiness_reports_configuration_and_storage(client, monkeypatch):
     }
 
 
+def test_conversation_replays_bounded_activity_events(client):
+    cid = create(client)
+    store = get_store()
+    store.emit(cid, "agent.started", {"name": "Planner", "run_id": "run-1"})
+    store.emit(cid, "message.delta", {"delta": "x" * 100_000})
+    store.emit(
+        cid,
+        "council.vote",
+        {"judge": "Security", "verdict": "approve", "run_id": "run-1"},
+    )
+    store.emit(
+        cid,
+        "message.finished",
+        {"id": "message-1", "status": "completed", "content": "x" * 100_000},
+    )
+    replay = client.get(f"/api/conversations/{cid}", headers=headers())
+    assert replay.status_code == 200
+    events = replay.json()["recent_events"]
+    assert [event["event"] for event in events] == [
+        "agent.started",
+        "council.vote",
+        "message.finished",
+    ]
+    assert "content" not in events[-1]["payload"]
+    assert client.get(
+        f"/api/conversations/{cid}", headers=headers("bob")
+    ).status_code == 404
+
+
 def test_profile_is_owner_scoped_and_persistent(client):
     default = client.get("/api/profile", headers=headers()).json()
     assert default["name"] == "Operator"

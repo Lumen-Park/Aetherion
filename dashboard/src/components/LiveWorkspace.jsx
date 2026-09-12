@@ -111,6 +111,42 @@ const writeProfileCache = (profile) => {
     // Profile persistence is best effort when browser storage is unavailable.
   }
 };
+const replayWorkspaceEvents = (events = []) => {
+  const activity = [],
+    agents = new Map();
+  let council = null;
+  for (const item of events) {
+    const event = item.event,
+      data = item.payload || {};
+    if (event === "agent.started" || event === "agent.completed") {
+      const status = event === "agent.started" ? "working" : "completed";
+      agents.set(data.name, { name: data.name, status });
+      activity.push(`${data.name}: ${status}`);
+    } else if (event === "council.vote") {
+      agents.set(data.judge, { name: data.judge, status: "voting" });
+      activity.push(`${data.judge}: voting`);
+    } else if (event === "council.verdict") {
+      council = data;
+      activity.push(`Council ${data.decision || "review"}`);
+    } else if (event === "council.human_decision") {
+      council = {
+        ...(council || {}),
+        human_decision: data.value,
+        approval_required: false,
+      };
+      activity.push(`Human decision: ${data.value}`);
+    } else if (event === "message.finished") {
+      activity.push(`Run ${data.status || "completed"}`);
+    } else if (event === "mission.error") {
+      activity.push("Run failed");
+    }
+  }
+  return {
+    activity: activity.slice(-20),
+    agents: [...agents.values()].slice(-14),
+    council,
+  };
+};
 export default function LiveWorkspace() {
   const [chats, setChats] = useState([]),
     [active, setActive] = useState(
@@ -455,7 +491,10 @@ export default function LiveWorkspace() {
       const latestCouncil = [...chat.messages]
         .reverse()
         .find((message) => message.metadata?.council)?.metadata?.council;
-      setCouncil(latestCouncil || null);
+      const replay = replayWorkspaceEvents(chat.recent_events);
+      setActivity(replay.activity);
+      setAgents(replay.agents);
+      setCouncil(replay.council || latestCouncil || null);
       cursor = Math.max(cursor, chat.last_event_sequence || 0);
       setBusy(chat.messages.some((m) => m.metadata?.status === "running"));
     };

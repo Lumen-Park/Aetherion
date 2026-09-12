@@ -231,10 +231,37 @@ class ConversationStore:
                 ).fetchall()
             ]
             sequence = db.execute("SELECT COALESCE(MAX(sequence), 0) FROM conversation_events WHERE conversation_id=?", (conversation_id,)).fetchone()[0]
+            event_rows = db.execute(
+                """
+                SELECT sequence, event, payload, created_at
+                FROM conversation_events
+                WHERE conversation_id=? AND event != 'message.delta'
+                ORDER BY sequence DESC
+                LIMIT 80
+                """,
+                (conversation_id,),
+            ).fetchall()
         for message in messages:
             message["metadata"] = json.loads(message["metadata"])
         result = self._conversation(row, messages)
         result["last_event_sequence"] = sequence
+        recent_events = []
+        for event in reversed(event_rows):
+            try:
+                payload = json.loads(event["payload"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                payload = {}
+            if event["event"] == "message.finished":
+                payload.pop("content", None)
+            recent_events.append(
+                {
+                    "sequence": event["sequence"],
+                    "event": event["event"],
+                    "payload": payload,
+                    "created_at": event["created_at"],
+                }
+            )
+        result["recent_events"] = recent_events
         return result
 
     def rename(self, owner: str, conversation_id: str, title: str):
