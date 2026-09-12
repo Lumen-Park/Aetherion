@@ -22,6 +22,7 @@ class LiveAttachment(BaseModel):
     name: str = Field(min_length=1, max_length=180)
     type: str = Field(default="application/octet-stream", max_length=120)
     size: int = Field(default=0, ge=0, le=20_000_000)
+    content: str | None = Field(default=None, max_length=50_000)
 
 
 class LiveRequest(BaseModel):
@@ -186,7 +187,15 @@ async def run_council(store, conversation_id, run_id, messages):
     return verdict
 
 
-async def execute(store, owner, conversation_id, run_id, message_id, mode):
+async def execute(
+    store,
+    owner,
+    conversation_id,
+    run_id,
+    message_id,
+    mode,
+    attachment_context=None,
+):
     content, status, council = "", "completed", None
     try:
         async with asyncio.timeout(420):
@@ -199,12 +208,21 @@ async def execute(store, owner, conversation_id, run_id, message_id, mode):
                 attachments = item.get("metadata", {}).get("attachments", [])
                 if attachments:
                     names = ", ".join(str(file.get("name", "unnamed")) for file in attachments)
+                    attachment_note = (
+                        ". Bounded text was ingested for this request."
+                        if any(file.get("text_ingested") for file in attachments)
+                        else ". File contents are not ingested by this advisory runtime."
+                    )
                     message += (
-                        "\n\n[Attached file metadata: "
-                        + names
-                        + ". File contents are not ingested by this advisory runtime.]"
+                        f"\n\n[Attached file metadata: {names}{attachment_note}]"
                     )
                 messages.append({"role": item["role"], "content": message})
+            if attachment_context and messages:
+                blocks = [
+                    f"[Attached text: {item['name']}]\n{item['content']}"
+                    for item in attachment_context
+                ]
+                messages[-1]["content"] += "\n\n" + "\n\n".join(blocks)
             system = "You are Aetherion's Chief of Staff. Give a useful, honest answer. You have no tools, web access, or file execution. Never claim to have executed, researched live sources, or received Council approval. Provide concise conclusions and uncertainty, not private deliberation."
             if mode == "standard":
                 from institution.registry import select, run_specialist
@@ -277,7 +295,22 @@ async def submit(conversation_id: str, request: LiveRequest, user=Depends(requir
         if db.execute("SELECT COUNT(*) FROM live_runs WHERE status='running'").fetchone()[0] >= 8:
             raise HTTPException(429, "The model service is busy. Please retry shortly.")
         now = time.time()
-        attachment_metadata = [item.model_dump() for item in request.attachments]
+        text_attachments = [
+            {"name": item.name, "content": item.content}
+            for item in request.attachments
+            if item.content
+        ]
+        if sum(len(item["content"]) for item in text_attachments) > 100_000:
+            raise HTTPException(422, "Combined text attachment content is limited to 100 KB.")
+        attachment_metadata = [
+            {
+                "name": item.name,
+                "type": item.type,
+                "size": item.size,
+                "text_ingested": bool(item.content),
+            }
+            for item in request.attachments
+        ]
         db.execute(
             "INSERT INTO messages VALUES (?, ?, 'user', ?, 'text', ?, ?)",
             (
@@ -291,7 +324,17 @@ async def submit(conversation_id: str, request: LiveRequest, user=Depends(requir
         db.execute("INSERT INTO messages VALUES (?, ?, 'assistant', '', 'text', ?, ?)", (message_id, conversation_id, json.dumps({"mode": request.mode, "status": "running", "live": True}), now + .001))
         db.execute("INSERT INTO live_runs VALUES (?, ?, ?, 'running')", (run_id, conversation_id, message_id))
         db.execute("UPDATE conversations SET updated_at=? WHERE id=?", (now, conversation_id))
-    tasks[run_id] = asyncio.create_task(execute(store, owner, conversation_id, run_id, message_id, request.mode))
+    tasks[run_id] = asyncio.create_task(
+        execute(
+            store,
+            owner,
+            conversation_id,
+            run_id,
+            message_id,
+            request.mode,
+            text_attachments,
+        )
+    )
     return {"id": run_id, "message_id": message_id, "status": "running"}
 
 

@@ -1169,6 +1169,11 @@
   padding: 4px 7px;
   overflow-wrap: anywhere;
 }
+.aw-attachment-ingested {
+  color: #b9c38f;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+}
 .aw-attached .aw-icon {
   height: 20px;
   width: 20px;

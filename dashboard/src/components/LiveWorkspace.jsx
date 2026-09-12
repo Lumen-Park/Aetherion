@@ -32,6 +32,34 @@ const origin = (import.meta.env.VITE_API_ORIGIN || "").replace(/\/$/, "");
 const ACTIVE_CONVERSATION_KEY = "aetherion_live_active_conversation";
 const DRAFT_CACHE_KEY = "aetherion_live_drafts";
 const NEW_DRAFT_KEY = "__new__";
+const MAX_TEXT_ATTACHMENT_BYTES = 200_000;
+const MAX_TEXT_CONTEXT_CHARS = 100_000;
+const TEXT_FILE_EXTENSIONS = new Set([
+  ".txt",
+  ".md",
+  ".markdown",
+  ".csv",
+  ".json",
+  ".log",
+  ".xml",
+  ".yaml",
+  ".yml",
+]);
+const isTextAttachment = (file) => {
+  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+  return (
+    (file.type || "").startsWith("text/") || TEXT_FILE_EXTENSIONS.has(extension)
+  );
+};
+const readTextAttachment = async (file) => {
+  if (!isTextAttachment(file) || file.size > MAX_TEXT_ATTACHMENT_BYTES)
+    return null;
+  try {
+    return (await file.text()).slice(0, 50_000);
+  } catch {
+    return null;
+  }
+};
 const readDraftCache = () => {
   try {
     const stored = JSON.parse(localStorage.getItem(DRAFT_CACHE_KEY) || "{}");
@@ -61,6 +89,7 @@ export default function LiveWorkspace() {
     [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState([]),
     [dragging, setDragging] = useState(false);
+  const [readingAttachments, setReadingAttachments] = useState(false);
   const [mode, setMode] = useState("quick"),
     [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false),
@@ -342,20 +371,32 @@ export default function LiveWorkspace() {
     watch();
     return () => controller.abort();
   }, [active]);
-  const addFiles = (files) => {
+  const addFiles = async (files) => {
     const incoming = Array.from(files || []);
     if (!incoming.length) return;
     const available = Math.max(0, 8 - attachments.length);
     if (incoming.length > available)
       setNotice("You can attach up to eight files per message.");
-    setAttachments((current) => [
-      ...current,
-      ...incoming.slice(0, available).map((file) => ({
-        name: file.name,
-        type: file.type || "application/octet-stream",
-        size: file.size,
-      })),
-    ]);
+    setReadingAttachments(true);
+    try {
+      let remainingTextBudget = MAX_TEXT_CONTEXT_CHARS;
+      const prepared = await Promise.all(
+        incoming.slice(0, available).map(async (file) => {
+          const text = await readTextAttachment(file);
+          const content = text?.slice(0, Math.max(0, remainingTextBudget));
+          if (content) remainingTextBudget -= content.length;
+          return {
+            name: file.name,
+            type: file.type || "application/octet-stream",
+            size: file.size,
+            ...(content ? { content } : {}),
+          };
+        }),
+      );
+      setAttachments((current) => [...current, ...prepared]);
+    } finally {
+      setReadingAttachments(false);
+    }
   };
   const sendContent = async ({
     content,
@@ -364,7 +405,8 @@ export default function LiveWorkspace() {
     requestAttachments = [],
     clearDraft = false,
   }) => {
-    if (!content.trim() || submitting.current || busy) return;
+    if (!content.trim() || submitting.current || busy || readingAttachments)
+      return;
     submitting.current = true;
     setBusy(true);
     setNotice("");
@@ -1004,6 +1046,9 @@ export default function LiveWorkspace() {
                 <span key={`${file.name}-${index}`}>
                   <Paperclip size={12} />
                   <span>{file.name}</span>
+                  {file.content && (
+                    <small className="aw-attachment-ingested">TEXT READY</small>
+                  )}
                   <IconButton
                     label={`Remove ${file.name}`}
                     onClick={() =>
@@ -1039,6 +1084,11 @@ export default function LiveWorkspace() {
           {draft.trim() && (
             <div className="aw-draft-status" role="status">
               <Check size={12} /> {draftStatus}
+            </div>
+          )}
+          {readingAttachments && (
+            <div className="aw-draft-status" role="status">
+              <Paperclip size={12} /> Preparing text attachments…
             </div>
           )}
           <div className="aw-composer-toolbar">
@@ -1095,7 +1145,7 @@ export default function LiveWorkspace() {
               <button
                 className="aw-send"
                 aria-label="Send message"
-                disabled={!draft.trim()}
+                disabled={!draft.trim() || readingAttachments}
                 onClick={send}
               >
                 <ArrowUp size={18} />
