@@ -9,6 +9,10 @@ import {
   PanelLeft,
   Copy,
   ShieldCheck,
+  Command,
+  Search,
+  X,
+  ChevronRight,
 } from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
 import AgentConstellation from "./AgentConstellation";
@@ -34,8 +38,11 @@ export default function LiveWorkspace() {
   const [drawer, setDrawer] = useState(false),
     [connected, setConnected] = useState(false);
   const [syncState, setSyncState] = useState("syncing");
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const selection = useRef(null),
-    submitting = useRef(false);
+    submitting = useRef(false),
+    composer = useRef(null),
+    palette = useRef(null);
   const token =
     localStorage.getItem("aetherion_token") ||
     sessionStorage.getItem("aetherion_token");
@@ -248,6 +255,40 @@ export default function LiveWorkspace() {
       setNotice(error.message);
     }
   };
+  const newConversation = () => {
+    setActive(null);
+    setDraft("");
+    setAgents([]);
+    setCouncil(null);
+    setPaletteOpen(false);
+    setDrawer(false);
+  };
+  const exportConversation = () => {
+    download(
+      messages
+        .map((message) => `## ${message.role}\n\n${message.content}`)
+        .join("\n\n"),
+      "aetherion-conversation.md",
+    );
+    setPaletteOpen(false);
+  };
+  useEffect(() => {
+    const key = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+      if (event.key === "Escape") {
+        if (paletteOpen) setPaletteOpen(false);
+        else if (busy) stop();
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [paletteOpen, busy]);
+  useEffect(() => {
+    if (paletteOpen) palette.current?.focus();
+  }, [paletteOpen]);
   const latest = [...messages]
     .reverse()
     .find((m) => m.role === "assistant" && m.metadata?.status !== "running");
@@ -264,14 +305,7 @@ export default function LiveWorkspace() {
         <div className="aw-brand">
           AETHERION <small>LIVE WORKSPACE</small>
         </div>
-        <button
-          className="aw-new"
-          onClick={() => {
-            setActive(null);
-            setDraft("");
-            setDrawer(false);
-          }}
-        >
+        <button className="aw-new" onClick={newConversation}>
           <Plus size={18} /> New conversation
         </button>
         <div className="aw-history">
@@ -452,6 +486,7 @@ export default function LiveWorkspace() {
         )}
         <div className="aw-composer" style={{ margin: "12px 24px 24px" }}>
           <textarea
+            ref={composer}
             aria-label="Message Aetherion"
             placeholder="An idea, a question, a little ambition…"
             value={draft}
@@ -487,14 +522,8 @@ export default function LiveWorkspace() {
             </select>
             <IconButton
               label="Export conversation"
-              onClick={() =>
-                download(
-                  messages
-                    .map((m) => `## ${m.role}\n\n${m.content}`)
-                    .join("\n\n"),
-                  "aetherion-conversation.md",
-                )
-              }
+              onClick={exportConversation}
+              disabled={!messages.length}
             >
               <Download size={17} />
             </IconButton>
@@ -520,6 +549,120 @@ export default function LiveWorkspace() {
           </div>
         </div>
       </main>
+      {paletteOpen && (
+        <div
+          className="aw-command-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPaletteOpen(false);
+          }}
+        >
+          <section
+            ref={palette}
+            className="aw-command-palette"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Workspace command palette"
+            tabIndex={-1}
+          >
+            <header>
+              <div>
+                <span className="aw-kicker">
+                  <Command size={12} /> COMMAND CENTER
+                </span>
+                <h2>What would you like to do?</h2>
+              </div>
+              <IconButton
+                label="Close command palette"
+                onClick={() => setPaletteOpen(false)}
+              >
+                <X size={17} />
+              </IconButton>
+            </header>
+            <div className="aw-command-search">
+              <Search size={16} />
+              <span>Search an action</span>
+              <kbd>ESC</kbd>
+            </div>
+            <div className="aw-command-list">
+              <button onClick={newConversation}>
+                <span className="aw-command-icon">
+                  <Plus size={16} />
+                </span>
+                <span>
+                  <b>New conversation</b>
+                  <small>Start with a clean workspace</small>
+                </span>
+                <ChevronRight size={15} />
+              </button>
+              <button
+                onClick={() => {
+                  setPaletteOpen(false);
+                  setTimeout(() => composer.current?.focus(), 0);
+                }}
+              >
+                <span className="aw-command-icon">
+                  <Command size={16} />
+                </span>
+                <span>
+                  <b>Focus composer</b>
+                  <small>Return to your next instruction</small>
+                </span>
+                <kbd>↵</kbd>
+              </button>
+              <button onClick={busy ? stop : undefined} disabled={!busy}>
+                <span className="aw-command-icon">
+                  <Square size={15} />
+                </span>
+                <span>
+                  <b>Stop generation</b>
+                  <small>
+                    {busy
+                      ? "Interrupt the current response"
+                      : "No response is running"}
+                  </small>
+                </span>
+                <kbd>ESC</kbd>
+              </button>
+              <button onClick={exportConversation} disabled={!messages.length}>
+                <span className="aw-command-icon">
+                  <Download size={15} />
+                </span>
+                <span>
+                  <b>Export conversation</b>
+                  <small>Save the current thread as Markdown</small>
+                </span>
+                <ChevronRight size={15} />
+              </button>
+            </div>
+            <div className="aw-command-section-label">RESPONSE MODE</div>
+            <div className="aw-command-modes">
+              {[
+                ["quick", "Quick", "Direct answer"],
+                ["standard", "Agent team", "Coordinate specialists"],
+                ["council", "Council review", "Seven governed perspectives"],
+              ].map(([value, label, description]) => (
+                <button
+                  key={value}
+                  aria-pressed={mode === value}
+                  onClick={() => {
+                    setMode(value);
+                    setPaletteOpen(false);
+                    setTimeout(() => composer.current?.focus(), 0);
+                  }}
+                >
+                  <span>{label.slice(0, 1)}</span>
+                  <b>{label}</b>
+                  <small>{description}</small>
+                </button>
+              ))}
+            </div>
+            <footer>
+              <span>⌘K / Ctrl K to open</span>
+              <span>ESC to close</span>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

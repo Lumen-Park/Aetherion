@@ -2597,6 +2597,228 @@
   background: #d38d83;
   box-shadow: 0 0 10px #d38d83aa;
 }
+.aw-command-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: start center;
+  padding: 13vh 20px 30px;
+  background: #050807a8;
+  backdrop-filter: blur(12px) saturate(115%);
+  -webkit-backdrop-filter: blur(12px) saturate(115%);
+  animation: aw-command-fade 0.18s ease both;
+}
+.aw-command-palette {
+  width: min(580px, 100%);
+  overflow: hidden;
+  border: 1px solid #d4c69838;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, #d9c9950d, transparent 35%),
+    linear-gradient(155deg, #1d231fef, #0f1512f5);
+  box-shadow:
+    0 36px 100px #000b,
+    0 1px 0 #ffffff1c inset,
+    0 -1px 0 #d9c9950d inset;
+  backdrop-filter: blur(30px) saturate(135%);
+  -webkit-backdrop-filter: blur(30px) saturate(135%);
+  animation: aw-command-rise 0.25s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+.aw-command-palette > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 22px 22px 17px;
+  border-bottom: 1px solid #ffffff0d;
+}
+.aw-command-palette > header .aw-kicker {
+  display: flex;
+  gap: 7px;
+}
+.aw-command-palette h2 {
+  margin-top: 8px;
+  color: #e4e2d2;
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: 400;
+}
+.aw-command-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 15px 18px 8px;
+  padding: 11px 12px;
+  border: 1px solid #b9bd9b24;
+  border-radius: 9px;
+  color: #aab19e;
+  background: #b9bd9b08;
+  font-size: 11px;
+}
+.aw-command-search svg {
+  color: #c7b68b;
+}
+.aw-command-search kbd,
+.aw-command-list kbd {
+  margin-left: auto;
+  padding: 3px 5px;
+  border: 1px solid #ffffff15;
+  border-radius: 4px;
+  color: #899481;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+}
+.aw-command-list {
+  display: grid;
+  gap: 3px;
+  padding: 7px 12px 12px;
+}
+.aw-command-list > button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #ccd1c1;
+  text-align: left;
+}
+.aw-command-list > button:hover:not(:disabled) {
+  border-color: #d2c39428;
+  background: #d2c3940b;
+}
+.aw-command-list > button:disabled {
+  opacity: 0.45;
+}
+.aw-command-list > button > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.aw-command-list b {
+  color: #d9dccd;
+  font-size: 11px;
+  font-weight: 500;
+}
+.aw-command-list small {
+  color: #899685;
+  font-size: 9px;
+}
+.aw-command-list > button > svg:last-child {
+  color: #7f8d7b;
+}
+.aw-command-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #cdbd8b22;
+  border-radius: 8px;
+  color: #cdbc8e;
+  background: #cdbd8b0b;
+}
+.aw-command-section-label {
+  padding: 8px 22px 7px;
+  border-top: 1px solid #ffffff0b;
+  color: #9eaa93;
+  font-size: 7px;
+  letter-spacing: 1.4px;
+}
+.aw-command-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  padding: 0 14px 17px;
+}
+.aw-command-modes > button {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid #b9bd9b14;
+  border-radius: 9px;
+  color: #aeb8a6;
+  text-align: left;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+.aw-command-modes > button:hover,
+.aw-command-modes > button[aria-pressed="true"] {
+  border-color: #cfbd8a4c;
+  background: #cfbd8a0e;
+  color: #ded7bd;
+  transform: translateY(-2px);
+}
+.aw-command-modes > button > span {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 1px solid #a5b69735;
+  border-radius: 50%;
+  color: #d5c08c;
+  font-size: 9px;
+}
+.aw-command-modes b {
+  font-size: 10px;
+  font-weight: 500;
+}
+.aw-command-modes small {
+  color: #84917d;
+  font-size: 8px;
+  line-height: 1.35;
+}
+.aw-command-palette > footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 11px 22px;
+  border-top: 1px solid #ffffff0b;
+  color: #7e8b79;
+  font-size: 8px;
+}
+@keyframes aw-command-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes aw-command-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 560px) {
+  .aw-command-overlay {
+    padding: 8vh 12px 20px;
+  }
+  .aw-command-palette h2 {
+    font-size: 21px;
+  }
+  .aw-command-modes {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aw-command-overlay,
+  .aw-command-palette {
+    animation: none;
+  }
+  .aw-command-modes > button:hover,
+  .aw-command-modes > button[aria-pressed="true"] {
+    transform: none;
+  }
+}
 .aw-composer-toolbar select {
   box-shadow:
     0 5px 18px #0003,
