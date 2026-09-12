@@ -35,6 +35,10 @@ class MessageCreate(BaseModel):
     attachments: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class MessageFeedback(BaseModel):
+    value: Optional[str] = Field(default=None, pattern="^(up|down)$")
+
+
 class ConversationStore:
     """Small SQLite event store; safe for multiple API threads and restarts."""
 
@@ -196,6 +200,35 @@ class ConversationStore:
             "created_at": now,
         }
 
+    def set_feedback(
+        self, owner: str, conversation_id: str, message_id: str, value: Optional[str]
+    ):
+        with self._lock, self.connect() as db:
+            row = db.execute(
+                """
+                SELECT m.role, m.metadata
+                FROM messages AS m
+                JOIN conversations AS c ON c.id = m.conversation_id
+                WHERE m.id = ? AND m.conversation_id = ? AND c.owner = ?
+                """,
+                (message_id, conversation_id, owner),
+            ).fetchone()
+            if not row or row["role"] != "assistant":
+                return False, None
+            try:
+                metadata = json.loads(row["metadata"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                metadata = {}
+            if value is None:
+                metadata.pop("feedback", None)
+            else:
+                metadata["feedback"] = value
+            db.execute(
+                "UPDATE messages SET metadata = ? WHERE id = ? AND conversation_id = ?",
+                (json.dumps(metadata), message_id, conversation_id),
+            )
+        return True, value
+
     def emit(self, conversation_id: str, event: str, payload: Dict[str, Any]):
         with self._lock, self.connect() as db:
             cursor = db.execute(
@@ -278,6 +311,21 @@ def get_conversation(conversation_id: str, user=Depends(get_current_user)):
     if not result:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return result
+
+
+@router.patch("/conversations/{conversation_id}/messages/{message_id}/feedback")
+def update_message_feedback(
+    conversation_id: str,
+    message_id: str,
+    request: MessageFeedback,
+    user=Depends(require_role("operator")),
+):
+    found, value = get_store().set_feedback(
+        owner_id(user), conversation_id, message_id, request.value
+    )
+    if not found:
+        raise HTTPException(status_code=404, detail="Assistant message not found")
+    return {"message_id": message_id, "feedback": value}
 
 
 @router.patch("/conversations/{conversation_id}")

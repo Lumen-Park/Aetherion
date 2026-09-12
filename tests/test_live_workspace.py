@@ -119,6 +119,46 @@ def test_stream_persistence_idempotency_and_specialists(client, monkeypatch):
     assert events[-1]["event"] == "message.finished"
 
 
+def test_message_feedback_persists_and_is_isolated(client):
+    cid = create(client)
+    owner = owner_id(AuthManager().verify_api_key("alice"))
+    assistant = get_store().add_message(
+        owner,
+        cid,
+        "assistant",
+        "A bounded answer.",
+        metadata={"status": "completed"},
+    )
+    feedback_url = f"/api/conversations/{cid}/messages/{assistant['id']}/feedback"
+    response = client.patch(
+        feedback_url, headers=headers(), json={"value": "up"}
+    )
+    assert response.status_code == 200
+    assert response.json()["feedback"] == "up"
+    saved = client.get(f"/api/conversations/{cid}", headers=headers()).json()
+    assert saved["messages"][-1]["metadata"]["feedback"] == "up"
+
+    cleared = client.patch(
+        feedback_url, headers=headers(), json={"value": None}
+    )
+    assert cleared.status_code == 200
+    assert "feedback" not in client.get(
+        f"/api/conversations/{cid}", headers=headers()
+    ).json()["messages"][-1]["metadata"]
+    assert (
+        client.patch(
+            feedback_url, headers=headers("bob"), json={"value": "down"}
+        ).status_code
+        == 404
+    )
+    assert (
+        client.patch(
+            feedback_url, headers=headers(), json={"value": "maybe"}
+        ).status_code
+        == 422
+    )
+
+
 def test_cancel_keeps_partial_and_blocks_overlap(client, monkeypatch):
     async def provider(messages):
         yield "Partial"

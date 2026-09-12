@@ -144,6 +144,7 @@ export default function LiveWorkspace() {
     selection.current = active;
     if (!active) {
       setMessages([]);
+      setFeedback({});
       setActivity([]);
       setAgents([]);
       setCouncil(null);
@@ -153,6 +154,7 @@ export default function LiveWorkspace() {
     const controller = new AbortController();
     let cursor = 0;
     setMessages([]);
+    setFeedback({});
     setActivity([]);
     setAgents([]);
     setCouncil(null);
@@ -162,6 +164,13 @@ export default function LiveWorkspace() {
       ).json();
       if (selection.current !== active) return;
       setMessages(chat.messages);
+      setFeedback(
+        Object.fromEntries(
+          chat.messages
+            .filter((message) => message.metadata?.feedback)
+            .map((message) => [message.id, message.metadata.feedback]),
+        ),
+      );
       setConnected(true);
       setSyncState("connected");
       const latestCouncil = [...chat.messages]
@@ -381,10 +390,26 @@ export default function LiveWorkspace() {
     }
   };
   const setMessageFeedback = (messageId, value) => {
-    setFeedback((current) => ({
-      ...current,
-      [messageId]: current[messageId] === value ? null : value,
-    }));
+    const previous = feedback[messageId] || null;
+    const next = previous === value ? null : value;
+    setFeedback((current) => {
+      const updated = { ...current };
+      if (next) updated[messageId] = next;
+      else delete updated[messageId];
+      return updated;
+    });
+    request(`/conversations/${active}/messages/${messageId}/feedback`, {
+      method: "PATCH",
+      body: JSON.stringify({ value: next }),
+    }).catch((error) => {
+      setFeedback((current) => {
+        const restored = { ...current };
+        if (previous) restored[messageId] = previous;
+        else delete restored[messageId];
+        return restored;
+      });
+      setNotice(error.message);
+    });
   };
   const stop = async () => {
     if (!active) return;
