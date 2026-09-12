@@ -27,6 +27,10 @@ class ConversationUpdate(BaseModel):
     title: str = Field(min_length=1, max_length=160)
 
 
+class ConversationBranch(BaseModel):
+    message_id: str = Field(min_length=1, max_length=80)
+
+
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=50_000)
     mode: str = Field(
@@ -165,6 +169,68 @@ class ConversationStore:
                 (conversation_id, owner),
             )
         return cursor.rowcount > 0
+
+    def branch(self, owner: str, conversation_id: str, message_id: str):
+        with self._lock, self.connect() as db:
+            source = db.execute(
+                "SELECT id, title FROM conversations WHERE id = ? AND owner = ?",
+                (conversation_id, owner),
+            ).fetchone()
+            if not source:
+                return None
+            target = db.execute(
+                "SELECT id, role, metadata FROM messages WHERE id = ? AND conversation_id = ?",
+                (message_id, conversation_id),
+            ).fetchone()
+            if not target:
+                raise KeyError("Message not found")
+            if target["role"] != "assistant":
+                raise ValueError("Branches must start from an assistant response")
+            try:
+                target_metadata = json.loads(target["metadata"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                target_metadata = {}
+            if target_metadata.get("status") == "running":
+                raise RuntimeError("Wait for the response to finish before branching")
+            source_messages = db.execute(
+                "SELECT id, role, content, kind, metadata FROM messages WHERE conversation_id = ? ORDER BY created_at, rowid",
+                (conversation_id,),
+            ).fetchall()
+            branch_messages = []
+            for item in source_messages:
+                branch_messages.append(item)
+                if item["id"] == message_id:
+                    break
+            if not branch_messages or branch_messages[-1]["id"] != message_id:
+                raise KeyError("Message not found")
+            branch_id, now = str(uuid.uuid4()), time.time()
+            title = f"Branch · {source['title']}"[:160]
+            db.execute(
+                "INSERT INTO conversations VALUES (?, ?, ?, 'ready', ?, ?)",
+                (branch_id, owner, title, now, now),
+            )
+            for index, item in enumerate(branch_messages):
+                db.execute(
+                    "INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        str(uuid.uuid4()),
+                        branch_id,
+                        item["role"],
+                        item["content"],
+                        item["kind"],
+                        item["metadata"],
+                        now + (index * 0.000001),
+                    ),
+                )
+        self.emit(
+            branch_id,
+            "conversation.branched",
+            {
+                "source_conversation_id": conversation_id,
+                "source_message_id": message_id,
+            },
+        )
+        return self.get(owner, branch_id)
 
     def add_message(
         self,
@@ -416,6 +482,27 @@ def update_conversation(
     if not get_store().rename(owner_id(user), conversation_id, request.title):
         raise HTTPException(status_code=404, detail="Conversation not found")
     return {"status": "updated"}
+
+
+@router.post("/conversations/{conversation_id}/branch", status_code=201)
+def branch_conversation(
+    conversation_id: str,
+    request: ConversationBranch,
+    user=Depends(require_role("operator")),
+):
+    try:
+        result = get_store().branch(
+            owner_id(user), conversation_id, request.message_id
+        )
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    if not result:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return result
 
 
 @router.delete("/conversations/{conversation_id}", status_code=204)

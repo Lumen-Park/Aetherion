@@ -479,15 +479,9 @@ export default function LiveWorkspace() {
     }
     try {
       const chat = await (
-        await request("/conversations", {
+        await request(`/conversations/${active}/branch`, {
           method: "POST",
-          body: JSON.stringify({
-            title:
-              `Branch · ${chats.find((item) => item.id === active)?.title || "Conversation"}`.slice(
-                0,
-                160,
-              ),
-          }),
+          body: JSON.stringify({ message_id: message.id }),
         })
       ).json();
       setActive(chat.id);
@@ -495,7 +489,7 @@ export default function LiveWorkspace() {
       setAttachments([]);
       await list();
       setNotice(
-        "Branch ready. Review the prompt, then send it when you are ready.",
+        "Branch created with prior context. Review the prompt, then send it when you are ready.",
       );
       setTimeout(() => composer.current?.focus(), 0);
     } catch (error) {

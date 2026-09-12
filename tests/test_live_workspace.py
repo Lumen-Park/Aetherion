@@ -198,6 +198,64 @@ def test_conversation_rename_and_delete_are_authenticated(client):
     )
 
 
+def test_branch_endpoint_preserves_context_and_enforces_roles(client):
+    cid = create(client)
+    owner = owner_id(AuthManager().verify_api_key("alice"))
+    first_user = get_store().add_message(owner, cid, "user", "First request")
+    assistant = get_store().add_message(
+        owner,
+        cid,
+        "assistant",
+        "First answer",
+        metadata={"status": "completed", "mode": "quick"},
+    )
+    get_store().add_message(owner, cid, "user", "Later request")
+
+    response = client.post(
+        f"/api/conversations/{cid}/branch",
+        headers=headers(),
+        json={"message_id": assistant["id"]},
+    )
+    assert response.status_code == 201
+    branch = response.json()
+    assert branch["title"] == "Branch · Test"
+    assert [item["content"] for item in branch["messages"]] == [
+        "First request",
+        "First answer",
+    ]
+    assert (
+        client.post(
+            f"/api/conversations/{cid}/branch",
+            headers=headers("reader"),
+            json={"message_id": assistant["id"]},
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            f"/api/conversations/{cid}/branch",
+            headers=headers(),
+            json={"message_id": first_user["id"]},
+        ).status_code
+        == 422
+    )
+    running = get_store().add_message(
+        owner,
+        cid,
+        "assistant",
+        "Still writing",
+        metadata={"status": "running"},
+    )
+    assert (
+        client.post(
+            f"/api/conversations/{cid}/branch",
+            headers=headers(),
+            json={"message_id": running["id"]},
+        ).status_code
+        == 409
+    )
+
+
 def test_draft_sync_persists_and_clears_per_conversation(client):
     cid = create(client)
     draft_url = f"/api/conversations/{cid}/draft"

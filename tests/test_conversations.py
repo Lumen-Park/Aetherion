@@ -52,6 +52,36 @@ def test_events_are_ordered_and_resumable(tmp_path):
     assert json.loads(events[0]["payload"])["agent"] == "Security"
 
 
+def test_branch_clones_history_through_selected_assistant_response(tmp_path):
+    store = ConversationStore(str(tmp_path / "branches.sqlite3"))
+    conversation = store.create("operator", "Release mission")
+    first_user = store.add_message(
+        "operator", conversation["id"], "user", "Plan the release"
+    )
+    first_assistant = store.add_message(
+        "operator",
+        conversation["id"],
+        "assistant",
+        "Release plan",
+        metadata={"status": "completed", "mode": "standard"},
+    )
+    store.add_message("operator", conversation["id"], "user", "Add rollback")
+
+    branch = store.branch("operator", conversation["id"], first_assistant["id"])
+
+    assert branch["id"] != conversation["id"]
+    assert branch["title"] == "Branch · Release mission"
+    assert [item["content"] for item in branch["messages"]] == [
+        first_user["content"],
+        first_assistant["content"],
+    ]
+    assert all(
+        item["id"] not in {first_user["id"], first_assistant["id"]}
+        for item in branch["messages"]
+    )
+    assert store.branch("other", conversation["id"], first_assistant["id"]) is None
+
+
 def test_chief_of_staff_routes_each_mode():
     for mode in ("quick", "standard", "research", "council"):
         plan = chief_response(
