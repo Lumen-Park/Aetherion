@@ -561,6 +561,74 @@
   align-items: center;
   gap: 7px;
 }
+.aw-voice-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 2px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.aw-voice-controls:has(.is-listening),
+.aw-voice-controls:has(.is-speaking) {
+  border-color: #c9b88735;
+  background: #c9b8870b;
+  box-shadow: 0 0 18px #c9b88712 inset;
+}
+.aw-voice-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 64px;
+  padding: 0 3px;
+  color: #778477;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.aw-voice-status i {
+  display: block;
+  width: 2px;
+  height: 7px;
+  border-radius: 2px;
+  background: #789484;
+  opacity: 0.65;
+}
+.aw-voice-status i:nth-child(2) {
+  height: 11px;
+}
+.aw-voice-status i:nth-child(3) {
+  height: 5px;
+}
+.aw-voice-status.is-listening,
+.aw-voice-status.is-speaking {
+  color: #d1bd88;
+}
+.aw-voice-status.is-listening i {
+  background: #d1bd88;
+  animation: aw-voice-wave 0.8s ease-in-out infinite alternate;
+}
+.aw-voice-status.is-listening i:nth-child(2) {
+  animation-delay: -0.35s;
+}
+.aw-voice-status.is-listening i:nth-child(3) {
+  animation-delay: -0.15s;
+}
+.aw-voice-status.is-speaking i {
+  background: #9fc8b1;
+  animation: aw-voice-wave 1.05s ease-in-out infinite alternate;
+}
+.aw-voice-status.is-speaking i:nth-child(2) {
+  animation-delay: -0.5s;
+}
+.aw-voice-status.is-speaking i:nth-child(3) {
+  animation-delay: -0.25s;
+}
 .aw-toolbar-divider {
   height: 16px;
   width: 1px;
@@ -2563,6 +2631,16 @@
     transform: translateY(0) translateZ(0);
   }
 }
+@keyframes aw-voice-wave {
+  from {
+    transform: scaleY(0.55);
+    opacity: 0.5;
+  }
+  to {
+    transform: scaleY(1.45);
+    opacity: 1;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .aw-main::before {
     animation: none;
@@ -2571,5 +2649,8 @@
   .aw-message:hover,
   .aw-send:hover:not(:disabled) {
     transform: none;
+  }
+  .aw-voice-status i {
+    animation: none;
   }
 }

@@ -18,6 +18,10 @@ export default function VoiceControls({ onTranscript, text = "", onNotice }) {
       recognition.current?.stop();
       return;
     }
+    if (speaking) {
+      window.speechSynthesis?.cancel();
+      setSpeaking(false);
+    }
     const Recognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!Recognition) {
@@ -31,7 +35,10 @@ export default function VoiceControls({ onTranscript, text = "", onNotice }) {
     session.lang = navigator.language || "en-US";
     session.interimResults = false;
     session.onstart = () => setListening(true);
-    session.onend = () => setListening(false);
+    session.onend = () => {
+      recognition.current = null;
+      setListening(false);
+    };
     session.onerror = (event) => {
       setListening(false);
       onNotice(
@@ -72,7 +79,7 @@ export default function VoiceControls({ onTranscript, text = "", onNotice }) {
     window.speechSynthesis.speak(utterance);
   };
   return (
-    <>
+    <div className="aw-voice-controls" aria-label="Voice controls">
       <IconButton
         label={listening ? "Stop dictation" : "Dictate message"}
         aria-pressed={listening}
@@ -95,6 +102,17 @@ export default function VoiceControls({ onTranscript, text = "", onNotice }) {
             ? "Reading answer aloud."
             : ""}
       </span>
-    </>
+      <span
+        className={`aw-voice-status ${listening ? "is-listening" : ""} ${speaking ? "is-speaking" : ""}`}
+        aria-hidden="true"
+      >
+        <i />
+        <i />
+        <i />
+        <small>
+          {listening ? "Listening" : speaking ? "Reading" : "Voice ready"}
+        </small>
+      </span>
+    </div>
   );
 }
