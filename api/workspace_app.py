@@ -49,7 +49,12 @@ def login(body: Login):
 
 @app.get("/health/live")
 def health():
-    return {"status": "alive", "demo": False, "model_configured": bool(os.getenv("AETHERION_CHAT_MODEL")), "modes": ["quick", "standard"]}
+    return {
+        "status": "alive",
+        "demo": False,
+        "model_configured": bool(os.getenv("AETHERION_CHAT_MODEL")),
+        "modes": ["quick", "standard", "research", "council"],
+    }
 
 
 @app.get("/api/auth/providers")

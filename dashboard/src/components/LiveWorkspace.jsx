@@ -1016,6 +1016,34 @@ export default function LiveWorkspace() {
                   ))}
                 </div>
               )}
+              {message.metadata?.sources?.length > 0 && (
+                <section className="aw-source-trace">
+                  <div className="aw-source-trace-heading">
+                    <span>
+                      <Paperclip size={13} /> Bounded research sources
+                    </span>
+                    <small>ATTACHMENTS ONLY · NO WEB SEARCH</small>
+                  </div>
+                  <div className="aw-source-trace-list">
+                    {message.metadata.sources.map((source, sourceIndex) => (
+                      <div
+                        key={`${source.id || source.name}-${sourceIndex}`}
+                        className="aw-source-trace-item"
+                      >
+                        <Paperclip size={12} />
+                        <div>
+                          <strong>{source.name}</strong>
+                          <small>
+                            {source.text_ingested
+                              ? "Text included in evidence brief"
+                              : "Metadata only · content not ingested"}
+                          </small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
               {message.metadata?.council && (
                 <section className="aw-council-card aw-live-council-card">
                   <div className="aw-card-heading">
@@ -1323,6 +1351,7 @@ export default function LiveWorkspace() {
             >
               <option value="quick">Quick</option>
               <option value="standard">Agent team</option>
+              <option value="research">Deep research · attachments</option>
               <option value="council">Council review</option>
             </select>
             <IconButton
@@ -1444,6 +1473,7 @@ export default function LiveWorkspace() {
               {[
                 ["quick", "Quick", "Direct answer"],
                 ["standard", "Agent team", "Coordinate specialists"],
+                ["research", "Deep research", "Synthesize attachments"],
                 ["council", "Council review", "Seven governed perspectives"],
               ].map(([value, label, description]) => (
                 <button

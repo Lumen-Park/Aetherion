@@ -1220,6 +1220,71 @@
   font-size: 7px;
   letter-spacing: 0.06em;
 }
+.aw-source-trace {
+  margin: 14px 0 0 47px;
+  padding: 10px 11px;
+  border: 1px solid #a9b69a2b;
+  border-radius: 9px;
+  background: linear-gradient(110deg, #8ea9950c, #d0b87308);
+}
+.aw-source-trace-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #d1d3be;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.aw-source-trace-heading span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.aw-source-trace-heading svg {
+  color: #cbb77a;
+}
+.aw-source-trace-heading small {
+  color: #818d7f;
+  font-size: 7px;
+}
+.aw-source-trace-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+}
+.aw-source-trace-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 6px 7px;
+  border: 1px solid #a9b69a16;
+  border-radius: 6px;
+  background: #ffffff05;
+}
+.aw-source-trace-item > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #a8bd9a;
+}
+.aw-source-trace-item > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.aw-source-trace-item strong {
+  overflow: hidden;
+  color: #d2d3c0;
+  font-size: 9px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aw-source-trace-item small {
+  color: #899584;
+  font-size: 8px;
+}
 .aw-attached .aw-icon {
   height: 20px;
   width: 20px;

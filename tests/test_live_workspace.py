@@ -82,6 +82,17 @@ def test_login_identity_and_owner_isolation(client):
         owner_id({"role": "operator"})
 
 
+def test_health_advertises_all_live_modes(client):
+    response = client.get("/health/live")
+    assert response.status_code == 200
+    assert response.json()["modes"] == [
+        "quick",
+        "standard",
+        "research",
+        "council",
+    ]
+
+
 def test_stream_persistence_idempotency_and_specialists(client, monkeypatch):
     async def provider(messages):
         yield "Real protocol "
@@ -327,6 +338,7 @@ def test_text_attachments_are_ingested_without_persisting_content(
         headers=headers(),
         json={
             "content": "Summarize the notes.",
+            "mode": "research",
             "attachments": [
                 {
                     "name": "notes.txt",
@@ -347,6 +359,15 @@ def test_text_attachments_are_ingested_without_persisting_content(
     attachment = messages[0]["metadata"]["attachments"][0]
     assert attachment["text_ingested"] is True
     assert "content" not in attachment
+    assert messages[-1]["metadata"]["sources"] == [
+        {
+            "id": "source-1",
+            "name": "notes.txt",
+            "type": "text/plain",
+            "size": 24,
+            "text_ingested": True,
+        }
+    ]
     assert (
         client.post(
             f"/api/conversations/{cid}/live",

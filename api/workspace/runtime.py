@@ -27,7 +27,9 @@ class LiveAttachment(BaseModel):
 
 class LiveRequest(BaseModel):
     content: str = Field(min_length=1, max_length=16000)
-    mode: str = Field(default="quick", pattern="^(quick|standard|council)$")
+    mode: str = Field(
+        default="quick", pattern="^(quick|standard|research|council)$"
+    )
     attachments: list[LiveAttachment] = Field(default_factory=list, max_length=8)
     request_id: uuid.UUID
 
@@ -195,8 +197,10 @@ async def execute(
     message_id,
     mode,
     attachment_context=None,
+    source_metadata=None,
 ):
     content, status, council = "", "completed", None
+    sources = source_metadata if mode == "research" else []
     try:
         async with asyncio.timeout(420):
             history = store.get(owner, conversation_id)["messages"]
@@ -224,6 +228,14 @@ async def execute(
                 ]
                 messages[-1]["content"] += "\n\n" + "\n\n".join(blocks)
             system = "You are Aetherion's Chief of Staff. Give a useful, honest answer. You have no tools, web access, or file execution. Never claim to have executed, researched live sources, or received Council approval. Provide concise conclusions and uncertainty, not private deliberation."
+            if mode == "research":
+                system = (
+                    "You are Aetherion's evidence analyst. Produce a bounded research brief "
+                    "using only the explicitly attached text in this request. You have no web "
+                    "access, browsing, or external sources. Cite claims with [Source: filename] "
+                    "when supported, distinguish evidence from inference, and say when the "
+                    "attached material is insufficient. Never imply that live research occurred."
+                )
             if mode == "standard":
                 from institution.registry import select, run_specialist
                 for specialist in select(messages[-1]["content"]):
@@ -261,13 +273,16 @@ async def execute(
         if not content:
             content = explanation
     finally:
+        final_metadata = {"council": council} if council else {}
+        if sources:
+            final_metadata["sources"] = sources
         persist(
             store,
             conversation_id,
             message_id,
             content,
             status,
-            {"council": council} if council else None,
+            final_metadata or None,
         )
         with store.connect() as db:
             db.execute("UPDATE live_runs SET status=? WHERE id=?", (status, run_id))
@@ -304,12 +319,13 @@ async def submit(conversation_id: str, request: LiveRequest, user=Depends(requir
             raise HTTPException(422, "Combined text attachment content is limited to 100 KB.")
         attachment_metadata = [
             {
+                "id": f"source-{index + 1}",
                 "name": item.name,
                 "type": item.type,
                 "size": item.size,
                 "text_ingested": bool(item.content),
             }
-            for item in request.attachments
+            for index, item in enumerate(request.attachments)
         ]
         db.execute(
             "INSERT INTO messages VALUES (?, ?, 'user', ?, 'text', ?, ?)",
@@ -333,6 +349,7 @@ async def submit(conversation_id: str, request: LiveRequest, user=Depends(requir
             message_id,
             request.mode,
             text_attachments,
+            attachment_metadata,
         )
     )
     return {"id": run_id, "message_id": message_id, "status": "running"}
