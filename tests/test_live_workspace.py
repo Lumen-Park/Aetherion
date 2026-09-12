@@ -175,10 +175,15 @@ def test_research_answer_creates_owner_scoped_editable_artifact(
     artifact_url = f"/api/conversations/{cid}/artifacts/{artifact_meta['id']}"
     artifact = client.get(artifact_url, headers=headers())
     assert artifact.status_code == 200
-    assert artifact.json()["content"] == "# Evidence brief\n\nA bounded finding."
-    assert client.get(
-        f"/api/conversations/{cid}/artifacts", headers=headers()
-    ).json()["artifacts"][0]["id"] == artifact_meta["id"]
+    assert (
+        artifact.json()["content"] == "# Evidence brief\n\nA bounded finding."
+    )
+    assert (
+        client.get(
+            f"/api/conversations/{cid}/artifacts", headers=headers()
+        ).json()["artifacts"][0]["id"]
+        == artifact_meta["id"]
+    )
     saved = client.put(
         artifact_url,
         headers=headers(),
