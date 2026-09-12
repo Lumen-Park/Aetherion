@@ -17,6 +17,15 @@ from pydantic import BaseModel, Field
 from api.dependencies import get_current_user, require_role
 
 router = APIRouter()
+DEFAULT_COUNCIL_NAMES = [
+    "Critic",
+    "Security",
+    "Alignment",
+    "Constraint",
+    "Evaluator",
+    "Documentation",
+    "Aetherion Prime",
+]
 
 
 class ConversationCreate(BaseModel):
@@ -45,6 +54,12 @@ class MessageFeedback(BaseModel):
 
 class CouncilDecision(BaseModel):
     value: str = Field(pattern="^(approve|revise|reject)$")
+
+
+class ProfileUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    nickname: str = Field(min_length=1, max_length=50)
+    council: List[str] = Field(min_length=7, max_length=7)
 
 
 class DraftUpdate(BaseModel):
@@ -101,6 +116,10 @@ class ConversationStore:
                     content TEXT NOT NULL DEFAULT '', revision INTEGER NOT NULL DEFAULT 0,
                     updated_at REAL NOT NULL,
                     FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS operator_profiles (
+                    owner TEXT PRIMARY KEY, name TEXT NOT NULL, nickname TEXT NOT NULL,
+                    council TEXT NOT NULL, updated_at REAL NOT NULL
                 );
                 """)
             draft_columns = {
@@ -381,6 +400,64 @@ class ConversationStore:
             "updated_at": row["updated_at"] if row else None,
         }
 
+    def get_profile(self, owner: str):
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT name, nickname, council, updated_at FROM operator_profiles WHERE owner=?",
+                (owner,),
+            ).fetchone()
+        if not row:
+            return {
+                "name": "Operator",
+                "nickname": "Operator",
+                "council": DEFAULT_COUNCIL_NAMES.copy(),
+                "updated_at": None,
+            }
+        try:
+            council = json.loads(row["council"])
+        except (TypeError, json.JSONDecodeError):
+            council = DEFAULT_COUNCIL_NAMES.copy()
+        return {
+            "name": row["name"],
+            "nickname": row["nickname"],
+            "council": council,
+            "updated_at": row["updated_at"],
+        }
+
+    def set_profile(self, owner: str, profile: ProfileUpdate):
+        now = time.time()
+        name, nickname = profile.name.strip(), profile.nickname.strip()
+        council = [item.strip() for item in profile.council]
+        if not name or not nickname:
+            raise ValueError("Name and nickname cannot be blank")
+        if any(not item or len(item) > 50 for item in council):
+            raise ValueError(
+                "Council member names must be between 1 and 50 characters"
+            )
+        with self._lock, self.connect() as db:
+            db.execute(
+                """
+                INSERT INTO operator_profiles(owner, name, nickname, council, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(owner) DO UPDATE SET
+                    name=excluded.name, nickname=excluded.nickname,
+                    council=excluded.council, updated_at=excluded.updated_at
+                """,
+                (
+                    owner,
+                    name,
+                    nickname,
+                    json.dumps(council),
+                    now,
+                ),
+            )
+        return {
+            "name": name,
+            "nickname": nickname,
+            "council": council,
+            "updated_at": now,
+        }
+
     def set_draft(
         self,
         owner: str,
@@ -509,6 +586,21 @@ def get_conversation(conversation_id: str, user=Depends(get_current_user)):
     if not result:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return result
+
+
+@router.get("/profile")
+def get_profile(user=Depends(get_current_user)):
+    return get_store().get_profile(owner_id(user))
+
+
+@router.put("/profile")
+def update_profile(
+    request: ProfileUpdate, user=Depends(require_role("operator"))
+):
+    try:
+        return get_store().set_profile(owner_id(user), request)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.get("/conversations/{conversation_id}/draft")

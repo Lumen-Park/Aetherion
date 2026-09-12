@@ -93,6 +93,56 @@ def test_health_advertises_all_live_modes(client):
     ]
 
 
+def test_profile_is_owner_scoped_and_persistent(client):
+    default = client.get("/api/profile", headers=headers()).json()
+    assert default["name"] == "Operator"
+    assert len(default["council"]) == 7
+    saved = client.put(
+        "/api/profile",
+        headers=headers(),
+        json={
+            "name": "Ada Operator",
+            "nickname": "Ada",
+            "council": [
+                "North",
+                "East",
+                "South",
+                "West",
+                "Zenith",
+                "Archive",
+                "Prime",
+            ],
+        },
+    )
+    assert saved.status_code == 200
+    assert client.get("/api/profile", headers=headers()).json()["nickname"] == "Ada"
+    assert client.get("/api/profile", headers=headers("bob")).json()["name"] == "Operator"
+    assert (
+        client.put(
+            "/api/profile",
+            headers=headers("reader"),
+            json={
+                "name": "Reader",
+                "nickname": "Reader",
+                "council": ["a"] * 7,
+            },
+        ).status_code
+        == 403
+    )
+    assert (
+        client.put(
+            "/api/profile",
+            headers=headers(),
+            json={
+                "name": " ",
+                "nickname": "Ada",
+                "council": ["a"] * 7,
+            },
+        ).status_code
+        == 422
+    )
+
+
 def test_stream_persistence_idempotency_and_specialists(client, monkeypatch):
     async def provider(messages):
         yield "Real protocol "

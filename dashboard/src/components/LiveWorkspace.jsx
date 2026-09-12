@@ -31,7 +31,21 @@ import "./workspace-premium.css";
 const origin = (import.meta.env.VITE_API_ORIGIN || "").replace(/\/$/, "");
 const ACTIVE_CONVERSATION_KEY = "aetherion_live_active_conversation";
 const DRAFT_CACHE_KEY = "aetherion_live_drafts";
+const PROFILE_CACHE_KEY = "aetherion_operator_profile";
 const NEW_DRAFT_KEY = "__new__";
+const DEFAULT_PROFILE = {
+  name: "Operator",
+  nickname: "Operator",
+  council: [
+    "Critic",
+    "Security",
+    "Alignment",
+    "Constraint",
+    "Evaluator",
+    "Documentation",
+    "Aetherion Prime",
+  ],
+};
 const MAX_TEXT_ATTACHMENT_BYTES = 200_000;
 const MAX_TEXT_CONTEXT_CHARS = 100_000;
 const TEXT_FILE_EXTENSIONS = new Set([
@@ -75,6 +89,27 @@ const writeDraftCache = (cache) => {
     // Draft persistence is best effort when browser storage is unavailable.
   }
 };
+const readProfileCache = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) || "{}");
+    return {
+      name: stored.name || DEFAULT_PROFILE.name,
+      nickname: stored.nickname || DEFAULT_PROFILE.nickname,
+      council: DEFAULT_PROFILE.council.map(
+        (name, index) => stored.council?.[index] || name,
+      ),
+    };
+  } catch {
+    return DEFAULT_PROFILE;
+  }
+};
+const writeProfileCache = (profile) => {
+  try {
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+  } catch {
+    // Profile persistence is best effort when browser storage is unavailable.
+  }
+};
 export default function LiveWorkspace() {
   const [chats, setChats] = useState([]),
     [active, setActive] = useState(
@@ -104,6 +139,10 @@ export default function LiveWorkspace() {
   const [draftSyncState, setDraftSyncState] = useState("local");
   const [draftConflict, setDraftConflict] = useState(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [profile, setProfile] = useState(() => readProfileCache());
+  const [profileDraft, setProfileDraft] = useState(() => readProfileCache());
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileSync, setProfileSync] = useState("local");
   const selection = useRef(null),
     submitting = useRef(false),
     composer = useRef(null),
@@ -317,6 +356,54 @@ export default function LiveWorkspace() {
       setConnected(false);
       setSyncState("offline");
     });
+  }, []);
+  useEffect(() => {
+    let mounted = true;
+    const cached = readProfileCache();
+    request("/profile")
+      .then((response) => response.json())
+      .then((remote) => {
+        if (!mounted) return;
+        const localCustomized =
+          cached.name !== DEFAULT_PROFILE.name ||
+          cached.nickname !== DEFAULT_PROFILE.nickname ||
+          cached.council.some(
+            (name, index) => name !== DEFAULT_PROFILE.council[index],
+          );
+        if (!remote.updated_at && localCustomized) {
+          setProfile(cached);
+          setProfileDraft(cached);
+          setProfileSync("saving");
+          return request("/profile", {
+            method: "PUT",
+            body: JSON.stringify(cached),
+          })
+            .then((response) => response.json())
+            .then(() => {
+              if (mounted) setProfileSync("cloud");
+            });
+        }
+        const next = {
+          name: remote.name || DEFAULT_PROFILE.name,
+          nickname: remote.nickname || DEFAULT_PROFILE.nickname,
+          council: DEFAULT_PROFILE.council.map(
+            (name, index) => remote.council?.[index] || name,
+          ),
+        };
+        setProfile(next);
+        setProfileDraft(next);
+        writeProfileCache(next);
+        setProfileSync("cloud");
+      })
+      .catch((error) => {
+        if (mounted) {
+          setProfileSync("local");
+          setNotice(`Using local profile: ${error.message}`);
+        }
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
   useEffect(() => {
     selection.current = active;
@@ -725,6 +812,38 @@ export default function LiveWorkspace() {
     setActive(id);
     setDrawer(false);
   };
+  const openProfile = () => {
+    setProfileDraft({ ...profile, council: [...profile.council] });
+    setProfileOpen(true);
+  };
+  const saveProfile = async () => {
+    const next = {
+      name: profileDraft.name.trim() || DEFAULT_PROFILE.name,
+      nickname: profileDraft.nickname.trim() || DEFAULT_PROFILE.nickname,
+      council: profileDraft.council.map(
+        (name, index) => name.trim() || DEFAULT_PROFILE.council[index],
+      ),
+    };
+    setProfile(next);
+    setProfileDraft(next);
+    writeProfileCache(next);
+    setProfileSync("saving");
+    try {
+      const response = await request("/profile", {
+        method: "PUT",
+        body: JSON.stringify(next),
+      });
+      const saved = await response.json();
+      setProfileSync("cloud");
+      writeProfileCache(saved);
+      setProfileOpen(false);
+      setNotice("Operator profile synced to the workspace.");
+    } catch (error) {
+      setProfileSync("local");
+      setProfileOpen(false);
+      setNotice(`Profile saved locally: ${error.message}`);
+    }
+  };
   const startRename = (chat) => {
     setConfirmingChat(null);
     setEditingChat(chat.id);
@@ -932,6 +1051,22 @@ export default function LiveWorkspace() {
             <p className="aw-live-history-empty">No conversations found.</p>
           )}
         </div>
+        <button className="aw-profile" type="button" onClick={openProfile}>
+          <span className="aw-profile-avatar">
+            {profile.nickname.slice(0, 2).toUpperCase()}
+          </span>
+          <span>
+            <b>{profile.nickname}</b>
+            <small>
+              {profileSync === "cloud"
+                ? "Profile synced"
+                : profileSync === "saving"
+                  ? "Syncing profile…"
+                  : "Profile saved locally"}
+            </small>
+          </span>
+          <Pencil size={14} />
+        </button>
         <div className="aw-preview-note">
           <span>
             {connected && syncState === "connected"
@@ -984,7 +1119,7 @@ export default function LiveWorkspace() {
           {!messages.length && (
             <div className="aw-empty">
               <OrbitalCore />
-              <h1>Bring your next idea to life.</h1>
+              <h1>Bring your next idea to life, {profile.nickname}.</h1>
               <p>
                 Ask the Chief of Staff, bring in a Planner and Reviewer, or ask
                 the Council.
@@ -1078,9 +1213,11 @@ export default function LiveWorkspace() {
                     </span>
                   </footer>
                   <div className="aw-live-vote-list">
-                    {message.metadata.council.votes?.map((vote) => (
+                    {message.metadata.council.votes?.map((vote, voteIndex) => (
                       <div key={vote.judge}>
-                        <strong>{vote.judge}</strong>
+                        <strong>
+                          {profile.council[voteIndex] || vote.judge}
+                        </strong>
                         <span className={`aw-vote-${vote.verdict}`}>
                           {vote.verdict}
                         </span>
@@ -1383,6 +1520,90 @@ export default function LiveWorkspace() {
           </div>
         </div>
       </main>
+      {profileOpen && (
+        <div
+          className="aw-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setProfileOpen(false);
+          }}
+        >
+          <section
+            className="aw-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="live-profile-title"
+          >
+            <header className="aw-modal-header">
+              <div>
+                <span className="aw-kicker">OPERATOR PROFILE</span>
+                <h2 id="live-profile-title">Make the institution yours.</h2>
+                <p>
+                  These preferences sync to your account and label the live
+                  workspace.
+                </p>
+              </div>
+              <IconButton
+                label="Close operator profile"
+                onClick={() => setProfileOpen(false)}
+              >
+                <X size={17} />
+              </IconButton>
+            </header>
+            <div className="aw-profile-fields">
+              <label>
+                Your name
+                <input
+                  maxLength={100}
+                  value={profileDraft.name}
+                  onChange={(event) =>
+                    setProfileDraft((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Call me
+                <input
+                  maxLength={50}
+                  value={profileDraft.nickname}
+                  onChange={(event) =>
+                    setProfileDraft((current) => ({
+                      ...current,
+                      nickname: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+            </div>
+            <div className="aw-section-label">YOUR SEVEN COUNCIL MEMBERS</div>
+            <div className="aw-profile-fields aw-profile-council-fields">
+              {profileDraft.council.map((name, index) => (
+                <label key={DEFAULT_PROFILE.council[index]}>
+                  {DEFAULT_PROFILE.council[index]}
+                  <input
+                    maxLength={50}
+                    value={name}
+                    onChange={(event) =>
+                      setProfileDraft((current) => ({
+                        ...current,
+                        council: current.council.map((item, itemIndex) =>
+                          itemIndex === index ? event.target.value : item,
+                        ),
+                      }))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+            <button className="aw-primary" type="button" onClick={saveProfile}>
+              Save profile <Check size={16} />
+            </button>
+          </section>
+        </div>
+      )}
       {paletteOpen && (
         <div
           className="aw-command-overlay"
