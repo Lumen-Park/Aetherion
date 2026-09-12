@@ -29,6 +29,7 @@ export default function LiveWorkspace() {
       () => localStorage.getItem(ACTIVE_CONVERSATION_KEY) || null,
     );
   const [chatQuery, setChatQuery] = useState("");
+  const [historyCursor, setHistoryCursor] = useState(-1);
   const [messages, setMessages] = useState([]),
     [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState([]),
@@ -326,6 +327,42 @@ export default function LiveWorkspace() {
   const visibleChats = chats.filter((chat) =>
     chat.title.toLowerCase().includes(chatQuery.trim().toLowerCase()),
   );
+  useEffect(() => {
+    setHistoryCursor((current) =>
+      visibleChats.length
+        ? Math.min(Math.max(current, -1), visibleChats.length - 1)
+        : -1,
+    );
+  }, [visibleChats.length]);
+  const selectConversation = (id) => {
+    setActive(id);
+    setDrawer(false);
+  };
+  const handleHistoryKeyDown = (event) => {
+    if (!visibleChats.length) return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setHistoryCursor((current) => {
+        if (current < 0)
+          return event.key === "ArrowDown" ? 0 : visibleChats.length - 1;
+        const next = event.key === "ArrowDown" ? current + 1 : current - 1;
+        return (next + visibleChats.length) % visibleChats.length;
+      });
+      return;
+    }
+    if (event.key === "Enter" && historyCursor >= 0) {
+      event.preventDefault();
+      selectConversation(visibleChats[historyCursor].id);
+      historySearch.current?.blur();
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setChatQuery("");
+      setHistoryCursor(-1);
+      historySearch.current?.blur();
+    }
+  };
   return (
     <div className="aw">
       <aside
@@ -347,9 +384,21 @@ export default function LiveWorkspace() {
           <input
             ref={historySearch}
             aria-label="Search conversations"
+            aria-autocomplete="list"
+            aria-controls="live-conversation-history"
+            aria-activedescendant={
+              historyCursor >= 0
+                ? `live-conversation-${visibleChats[historyCursor]?.id}`
+                : undefined
+            }
             placeholder="Search conversations"
+            role="combobox"
             value={chatQuery}
-            onChange={(event) => setChatQuery(event.target.value)}
+            onChange={(event) => {
+              setChatQuery(event.target.value);
+              setHistoryCursor(event.target.value ? 0 : -1);
+            }}
+            onKeyDown={handleHistoryKeyDown}
           />
           {chatQuery ? (
             <button
@@ -364,17 +413,17 @@ export default function LiveWorkspace() {
             <kbd>/</kbd>
           )}
         </label>
-        <div className="aw-history">
+        <div id="live-conversation-history" className="aw-history">
           {visibleChats.length ? (
-            visibleChats.map((chat) => (
+            visibleChats.map((chat, index) => (
               <button
                 key={chat.id}
-                className={`aw-nav ${chat.id === active ? "selected" : ""}`}
+                id={`live-conversation-${chat.id}`}
+                className={`aw-nav ${chat.id === active ? "selected" : ""} ${
+                  index === historyCursor ? "history-cursor" : ""
+                }`}
                 aria-current={chat.id === active ? "page" : undefined}
-                onClick={() => {
-                  setActive(chat.id);
-                  setDrawer(false);
-                }}
+                onClick={() => selectConversation(chat.id)}
               >
                 <span className="aw-history-dot" />
                 <span>{chat.title}</span>

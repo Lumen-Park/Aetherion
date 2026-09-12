@@ -277,6 +277,15 @@
 .aw-history .aw-nav > .aw-history-dot {
   margin-left: 0;
 }
+.aw-history .aw-nav.history-cursor {
+  background: #cdbd8b12;
+  color: #e4dfca;
+  outline: 1px solid #cdbd8b36;
+  outline-offset: -1px;
+}
+.aw-history .aw-nav.history-cursor .aw-history-dot {
+  color: var(--gold);
+}
 .aw-history-label {
   display: flex;
   align-items: center;
