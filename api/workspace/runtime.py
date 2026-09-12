@@ -1,7 +1,9 @@
 """Bounded live conversation runtime. One process per persistent SQLite volume."""
 import asyncio
 import json
+import math
 import os
+import re
 import time
 import uuid
 
@@ -18,8 +20,19 @@ tasks = {}
 
 class LiveRequest(BaseModel):
     content: str = Field(min_length=1, max_length=16000)
-    mode: str = Field(default="quick", pattern="^(quick|standard)$")
+    mode: str = Field(default="quick", pattern="^(quick|standard|council)$")
     request_id: uuid.UUID
+
+
+COUNCIL_JUDGES = (
+    "Critic",
+    "Security",
+    "Alignment",
+    "Constraint",
+    "Evaluator",
+    "Documentation",
+    "Aetherion Prime",
+)
 
 
 def initialize():
@@ -65,14 +78,109 @@ async def tokens(messages):
         raise RuntimeError("The model connection ended before completing the answer.")
 
 
-def persist(store, conversation_id, message_id, content, status):
+def persist(store, conversation_id, message_id, content, status, metadata=None):
     with store.connect() as db:
-        db.execute("UPDATE messages SET content=?, metadata=json_set(metadata, '$.status', ?) WHERE id=?", (content, status, message_id))
+        row = db.execute(
+            "SELECT metadata FROM messages WHERE id=?", (message_id,)
+        ).fetchone()
+        current = {}
+        if row:
+            try:
+                current = json.loads(row["metadata"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                current = {}
+        current["status"] = status
+        current.update(metadata or {})
+        db.execute(
+            "UPDATE messages SET content=?, metadata=? WHERE id=?",
+            (content, json.dumps(current), message_id),
+        )
         db.execute("UPDATE conversations SET updated_at=? WHERE id=?", (time.time(), conversation_id))
 
 
+def parse_council_vote(raw, judge):
+    text = raw.strip().strip("`").strip()
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        text = match.group(0)
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"{judge} returned an invalid Council vote.") from error
+    verdict = str(value.get("verdict", "")).lower().strip()
+    if verdict not in {"approve", "revise", "reject"}:
+        raise RuntimeError(f"{judge} returned an invalid Council verdict.")
+    try:
+        confidence = float(value.get("confidence"))
+    except (TypeError, ValueError) as error:
+        raise RuntimeError(f"{judge} returned an invalid Council confidence.") from error
+    if not math.isfinite(confidence) or not 0 <= confidence <= 1:
+        raise RuntimeError(f"{judge} returned an invalid Council confidence.")
+    reason = str(value.get("reason", "")).strip()
+    if not reason or len(reason) > 360:
+        raise RuntimeError(f"{judge} returned an invalid Council reason.")
+    return {
+        "judge": judge,
+        "verdict": verdict,
+        "confidence": round(confidence, 3),
+        "reason": reason,
+    }
+
+
+async def run_council(store, conversation_id, run_id, messages):
+    votes = []
+    for judge in COUNCIL_JUDGES:
+        store.emit(
+            conversation_id,
+            "agent.started",
+            {"name": judge, "role": "council_judge", "run_id": run_id},
+        )
+        raw = ""
+        prompt = (
+            f"You are Council judge {judge}. Review the user's request and the available advisory context. "
+            "You have no tools and must not claim execution, live research, or certainty. "
+            "Return exactly one JSON object with verdict (approve, revise, or reject), confidence (0 to 1), "
+            "and a short reason under 280 characters. Do not include private chain-of-thought."
+        )
+        async for delta in tokens([{"role": "system", "content": prompt}, *messages]):
+            raw += delta
+            if len(raw) > 4000:
+                raise RuntimeError(f"{judge} exceeded the Council vote limit.")
+        vote = parse_council_vote(raw, judge)
+        votes.append(vote)
+        store.emit(conversation_id, "council.vote", {**vote, "run_id": run_id})
+        store.emit(
+            conversation_id,
+            "agent.completed",
+            {"name": judge, "role": "council_judge", "run_id": run_id},
+        )
+    security = next(v for v in votes if v["judge"] == "Security")
+    approvals = sum(v["verdict"] == "approve" for v in votes)
+    rejections = sum(v["verdict"] == "reject" for v in votes)
+    if security["verdict"] == "reject":
+        decision, security_veto = "reject", True
+    elif rejections >= 4:
+        decision, security_veto = "reject", False
+    elif approvals >= 4:
+        decision, security_veto = "approve", False
+    else:
+        decision, security_veto = "revise", False
+    verdict = {
+        "decision": decision,
+        "security_veto": security_veto,
+        "approvals": approvals,
+        "rejections": rejections,
+        "revisions": len(votes) - approvals - rejections,
+        "confidence": round(sum(v["confidence"] for v in votes) / len(votes), 3),
+        "votes": votes,
+        "approval_required": True,
+    }
+    store.emit(conversation_id, "council.verdict", {**verdict, "run_id": run_id})
+    return verdict
+
+
 async def execute(store, owner, conversation_id, run_id, message_id, mode):
-    content, status = "", "completed"
+    content, status, council = "", "completed", None
     try:
         async with asyncio.timeout(420):
             history = store.get(owner, conversation_id)["messages"]
@@ -86,6 +194,17 @@ async def execute(store, owner, conversation_id, run_id, message_id, mode):
                     summary = await run_specialist(name, messages, tokens)
                     messages.append({"role": "assistant", "content": name + " advisory summary: " + summary})
                     store.emit(conversation_id, "agent.completed", {"name": name, "run_id": run_id, "summary": summary})
+            if mode == "council":
+                council = await run_council(store, conversation_id, run_id, messages)
+                messages.append({
+                    "role": "assistant",
+                    "content": "Council review summary: " + json.dumps({
+                        "decision": council["decision"],
+                        "approvals": council["approvals"],
+                        "rejections": council["rejections"],
+                        "security_veto": council["security_veto"],
+                    }),
+                })
             store.emit(conversation_id, "agent.started", {"name": "Chief of Staff", "run_id": run_id})
             async for delta in tokens([{"role": "system", "content": system}, *messages]):
                 content += delta
@@ -104,10 +223,17 @@ async def execute(store, owner, conversation_id, run_id, message_id, mode):
         if not content:
             content = explanation
     finally:
-        persist(store, conversation_id, message_id, content, status)
+        persist(
+            store,
+            conversation_id,
+            message_id,
+            content,
+            status,
+            {"council": council} if council else None,
+        )
         with store.connect() as db:
             db.execute("UPDATE live_runs SET status=? WHERE id=?", (status, run_id))
-        store.emit(conversation_id, "message.finished", {"id": message_id, "content": content, "status": status, "run_id": run_id})
+        store.emit(conversation_id, "message.finished", {"id": message_id, "content": content, "status": status, "run_id": run_id, "council": council})
         tasks.pop(run_id, None)
 
 

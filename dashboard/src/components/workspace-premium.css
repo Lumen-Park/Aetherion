@@ -2077,3 +2077,74 @@
   outline: 2px solid #b6bf91;
   outline-offset: 3px;
 }
+.aw-council-live-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 24px 6px;
+  padding: 8px 12px;
+  color: #d5cfb1;
+  border: 1px solid #b8bd9230;
+  border-radius: 8px;
+  background: #b8bd920b;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.aw-live-council-card {
+  cursor: default;
+}
+.aw-live-council-card:hover {
+  border-color: #b8bd9238;
+}
+.aw-live-vote-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 12px;
+  margin-top: 16px;
+}
+.aw-live-vote-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  padding: 8px 9px;
+  border: 1px solid #b8bd9218;
+  border-radius: 6px;
+  background: #b8bd9208;
+}
+.aw-live-vote-list strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #d0d3bf;
+  font-size: 10px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aw-live-vote-list span {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.aw-vote-approve {
+  color: #9bc08d;
+}
+.aw-vote-revise {
+  color: #d0ac6a;
+}
+.aw-vote-reject {
+  color: #d8877b;
+}
+.aw-live-vote-list small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: #949d8e;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .aw-live-vote-list {
+    grid-template-columns: 1fr;
+  }
+}

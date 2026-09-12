@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 import uuid
 
@@ -148,6 +149,45 @@ def test_cancel_keeps_partial_and_blocks_overlap(client, monkeypatch):
     assert result["content"] == "Partial"
 
 
+def test_council_persists_seven_votes_and_security_veto(client, monkeypatch):
+    async def provider(messages):
+        system = messages[0]["content"]
+        if "Council judge" in system:
+            judge = system.split("Council judge ", 1)[1].split(".", 1)[0]
+            verdict = "reject" if judge == "Security" else "approve"
+            yield json.dumps(
+                {
+                    "verdict": verdict,
+                    "confidence": 0.91,
+                    "reason": "Security policy requires a human approval checkpoint.",
+                }
+            )
+            return
+        yield "The Council reviewed the request and recorded its advisory verdict."
+
+    monkeypatch.setattr(runtime, "tokens", provider)
+    cid = create(client)
+    response = client.post(
+        f"/api/conversations/{cid}/live",
+        headers=headers(),
+        json={
+            "content": "Review this change",
+            "mode": "council",
+            "request_id": str(uuid.uuid4()),
+        },
+    )
+    assert response.status_code == 202
+    result = wait_finished(client, cid)[-1]
+    council = result["metadata"]["council"]
+    assert result["metadata"]["status"] == "completed"
+    assert council["decision"] == "reject"
+    assert council["security_veto"] is True
+    assert len(council["votes"]) == 7
+    events = get_store().events(cid, 0)
+    assert sum(event["event"] == "council.vote" for event in events) == 7
+    assert any(event["event"] == "council.verdict" for event in events)
+
+
 def test_provider_failure_is_never_demo(client, monkeypatch):
     monkeypatch.delenv("AETHERION_CHAT_MODEL", raising=False)
     cid = create(client)
@@ -165,7 +205,7 @@ def test_provider_failure_is_never_demo(client, monkeypatch):
             headers=headers(),
             json={
                 "content": "Hello",
-                "mode": "council",
+                "mode": "invalid",
                 "request_id": str(uuid.uuid4()),
             },
         ).status_code

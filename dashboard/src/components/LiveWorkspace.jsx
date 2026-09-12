@@ -1,7 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
-import { Plus, ArrowUp, Square, Download, PanelLeft, Copy } from "lucide-react";
+import {
+  Plus,
+  ArrowUp,
+  Square,
+  Download,
+  PanelLeft,
+  Copy,
+  ShieldCheck,
+} from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
 import VoiceControls from "./VoiceControls";
 import { IconButton, download } from "./WorkspaceParts";
@@ -17,6 +25,7 @@ export default function LiveWorkspace() {
     [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false),
     [activity, setActivity] = useState([]);
+  const [council, setCouncil] = useState(null);
   const [drawer, setDrawer] = useState(false),
     [connected, setConnected] = useState(false);
   const selection = useRef(null),
@@ -59,6 +68,7 @@ export default function LiveWorkspace() {
     if (!active) {
       setMessages([]);
       setActivity([]);
+      setCouncil(null);
       setBusy(false);
       return;
     }
@@ -66,6 +76,7 @@ export default function LiveWorkspace() {
     let cursor = 0;
     setMessages([]);
     setActivity([]);
+    setCouncil(null);
     setDraft("");
     const sync = async () => {
       const chat = await (
@@ -73,6 +84,10 @@ export default function LiveWorkspace() {
       ).json();
       if (selection.current !== active) return;
       setMessages(chat.messages);
+      const latestCouncil = [...chat.messages]
+        .reverse()
+        .find((message) => message.metadata?.council)?.metadata?.council;
+      setCouncil(latestCouncil || null);
       cursor = Math.max(cursor, chat.last_event_sequence || 0);
       setBusy(chat.messages.some((m) => m.metadata?.status === "running"));
     };
@@ -117,6 +132,7 @@ export default function LiveWorkspace() {
                   ...items.slice(-19),
                   `Run ${data.status}`,
                 ]);
+              if (event[1] === "council.verdict") setCouncil(data);
               if (event[1] === "mission.error") setNotice(data.detail);
               if (id) cursor = Math.max(cursor, Number(id[1]));
             }
@@ -261,7 +277,10 @@ export default function LiveWorkspace() {
             <div className="aw-empty">
               <OrbitalCore />
               <h1>Bring your next idea to life.</h1>
-              <p>Ask the Chief of Staff, or bring in a Planner and Reviewer.</p>
+              <p>
+                Ask the Chief of Staff, bring in a Planner and Reviewer, or ask
+                the Council.
+              </p>
             </div>
           )}
           {messages.map((message) => (
@@ -295,9 +314,62 @@ export default function LiveWorkspace() {
                   <Copy size={15} />
                 </IconButton>
               )}
+              {message.metadata?.council && (
+                <section className="aw-council-card aw-live-council-card">
+                  <div className="aw-card-heading">
+                    <span>
+                      <ShieldCheck size={16} />
+                      Live Council verdict
+                    </span>
+                    <small>SEVEN JUDGES · HUMAN REVIEW</small>
+                  </div>
+                  <div className="aw-vote-bar">
+                    {message.metadata.council.votes?.map((vote) => (
+                      <i
+                        key={vote.judge}
+                        className={vote.verdict === "revise" ? "revision" : ""}
+                        title={`${vote.judge}: ${vote.reason}`}
+                      />
+                    ))}
+                  </div>
+                  <footer>
+                    <span>
+                      <b>{message.metadata.council.decision?.toUpperCase()}</b>{" "}
+                      · {message.metadata.council.approvals} approve ·{" "}
+                      {message.metadata.council.rejections} reject ·{" "}
+                      {message.metadata.council.revisions} revise
+                    </span>
+                    <span>
+                      {message.metadata.council.security_veto
+                        ? "Security veto"
+                        : "Approval required"}
+                    </span>
+                  </footer>
+                  <div className="aw-live-vote-list">
+                    {message.metadata.council.votes?.map((vote) => (
+                      <div key={vote.judge}>
+                        <strong>{vote.judge}</strong>
+                        <span className={`aw-vote-${vote.verdict}`}>
+                          {vote.verdict}
+                        </span>
+                        <small>{vote.reason}</small>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
             </article>
           ))}
         </div>
+        {council && (
+          <div className="aw-council-live-status" role="status">
+            <ShieldCheck size={15} />
+            <span>
+              Council {council.decision || "review"} · {council.approvals || 0}
+               approve / {council.rejections || 0} reject
+            </span>
+          </div>
+        )}
         {activity.length > 0 && (
           <details style={{ padding: "8px 24px" }}>
             <summary>Agent activity · {activity.at(-1)}</summary>
@@ -344,6 +416,7 @@ export default function LiveWorkspace() {
             >
               <option value="quick">Quick</option>
               <option value="standard">Agent team</option>
+              <option value="council">Council review</option>
             </select>
             <IconButton
               label="Export conversation"

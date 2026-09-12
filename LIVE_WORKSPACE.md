@@ -6,7 +6,7 @@ The README's three-tier model is a useful architectural direction: orchestration
 
 - Premium orbital design preview remains explicitly simulated.
 - Authenticated users enter a separate live workspace. No demo answer is substituted for a failed model call.
-- Quick mode streams from an administrator-configured Ollama model. Agent team mode calls a Planner, a Reviewer, then the Chief of Staff. These are advisory model roles, not the legacy 70-agent registry or an execution engine.
+- Quick mode streams from an administrator-configured Ollama model. Agent team mode calls selected versioned specialists, then the Chief of Staff. Council mode runs seven strict advisory judge passes, applies a Security absolute veto plus four-vote thresholds, persists the structured verdict, and still requires human approval. These are advisory model roles, not an execution engine.
 - Conversation history, partial output, errors, and ordered events persist in a server-side SQLite database. Refresh/reconnection reads persisted state. Different API keys receive distinct identities; shared keys intentionally share an account.
 - Idempotent live submissions, one running response per conversation, cooperative cancellation, a 420-second total timeout, output limits, and interrupted-state recovery after service restart.
 - Browser dictation inserts editable text without sending it. Read aloud is optional and stoppable. Browser support and microphone permission vary; speech services may process audio online.
@@ -19,7 +19,7 @@ The README's three-tier model is a useful architectural direction: orchestration
 
 Production hosting has not been provisioned or deployed. No reachable model server or hosting credentials were supplied, so real-model answer quality and latency have not been tested. Tests use explicit protocol fixtures and verify failure when no model is configured.
 
-Live Council voting, web research/citations, attachment ingestion, human approval checkpoints, tool execution, full profile synchronization, editable server artifacts, and live branching are not wired into this service. The richer Council/artifact interactions remain in the labeled design preview. Live conversation storage is centralized server persistence, not offline conflict-resolving synchronization. The roster catalog and college microservice are new module boundaries, but they do not claim that every legacy pipeline has been migrated.
+Web research/citations, attachment ingestion, interactive human approval checkpoints, tool execution, full profile synchronization, editable server artifacts, and live branching are not wired into this service. Council verdicts are persisted and clearly marked as advisory; the richer approval and artifact interactions remain in the labeled design preview. Live conversation storage is centralized server persistence, not offline conflict-resolving synchronization. The roster catalog and college microservice are new module boundaries, but they do not claim that every legacy pipeline has been migrated.
 
 This service requires exactly one API worker per database volume. It does not use Redis for distributed execution. Refreshing the browser leaves server work running; restarting the server marks unfinished work interrupted and retains partial output. Model context uses the last 12 nonempty messages, each capped at 8,000 characters; earlier conversation content remains in storage but is not automatically remembered.
 
@@ -39,4 +39,4 @@ Before public rollout, add gateway rate limiting, monitoring, a tested backup sc
 
 ## Validation
 
-28 focused backend and authentication tests passed: storage lifecycle, event replay, API-key/JWT isolation, authentication/role boundaries, idempotency, specialist sequencing, partial cancellation, provider failure, and restart interruption. The dashboard demo build passed. Browser inspection verified sign-in and live service error presentation. Microphone capture and real audio output require user/device verification.
+Focused backend and authentication tests cover storage lifecycle, event replay, API-key/JWT isolation, authentication/role boundaries, idempotency, specialist sequencing, seven-judge Council voting with Security veto, partial cancellation, provider failure, and restart interruption. The dashboard build passes. Browser inspection verified sign-in and live service error presentation. Microphone capture, real audio output, and live model latency require user/device and deployment verification.
