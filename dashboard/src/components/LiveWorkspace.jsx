@@ -13,6 +13,7 @@ import {
   Search,
   X,
   ChevronRight,
+  Paperclip,
 } from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
 import AgentConstellation from "./AgentConstellation";
@@ -29,6 +30,8 @@ export default function LiveWorkspace() {
     );
   const [messages, setMessages] = useState([]),
     [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState([]),
+    [dragging, setDragging] = useState(false);
   const [mode, setMode] = useState("quick"),
     [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false),
@@ -42,7 +45,8 @@ export default function LiveWorkspace() {
   const selection = useRef(null),
     submitting = useRef(false),
     composer = useRef(null),
-    palette = useRef(null);
+    palette = useRef(null),
+    fileInput = useRef(null);
   const token =
     localStorage.getItem("aetherion_token") ||
     sessionStorage.getItem("aetherion_token");
@@ -210,6 +214,21 @@ export default function LiveWorkspace() {
     watch();
     return () => controller.abort();
   }, [active]);
+  const addFiles = (files) => {
+    const incoming = Array.from(files || []);
+    if (!incoming.length) return;
+    const available = Math.max(0, 8 - attachments.length);
+    if (incoming.length > available)
+      setNotice("You can attach up to eight files per message.");
+    setAttachments((current) => [
+      ...current,
+      ...incoming.slice(0, available).map((file) => ({
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+      })),
+    ]);
+  };
   const send = async () => {
     if (!draft.trim() || submitting.current || busy) return;
     submitting.current = true;
@@ -232,10 +251,12 @@ export default function LiveWorkspace() {
         body: JSON.stringify({
           content: draft,
           mode,
+          attachments,
           request_id: crypto.randomUUID(),
         }),
       });
       setDraft("");
+      setAttachments([]);
       await list();
       const chat = await (await request(`/conversations/${id}`)).json();
       if (selection.current === id) setMessages(chat.messages);
@@ -258,6 +279,7 @@ export default function LiveWorkspace() {
   const newConversation = () => {
     setActive(null);
     setDraft("");
+    setAttachments([]);
     setAgents([]);
     setCouncil(null);
     setPaletteOpen(false);
@@ -396,6 +418,16 @@ export default function LiveWorkspace() {
                   {message.content || "Working…"}
                 </ReactMarkdown>
               </div>
+              {message.metadata?.attachments?.length > 0 && (
+                <div className="aw-attached aw-message-attachments">
+                  {message.metadata.attachments.map((file, index) => (
+                    <span key={`${file.name}-${index}`}>
+                      <Paperclip size={12} />
+                      {file.name}
+                    </span>
+                  ))}
+                </div>
+              )}
               {message.content && (
                 <IconButton
                   label="Copy message"
@@ -484,7 +516,43 @@ export default function LiveWorkspace() {
             {notice}
           </div>
         )}
-        <div className="aw-composer" style={{ margin: "12px 24px 24px" }}>
+        <div
+          className={`aw-composer ${dragging ? "dragging" : ""}`}
+          style={{ margin: "12px 24px 24px" }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget))
+              setDragging(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            addFiles(event.dataTransfer.files);
+          }}
+        >
+          {attachments.length > 0 && (
+            <div className="aw-attached" aria-label="Attached files">
+              {attachments.map((file, index) => (
+                <span key={`${file.name}-${index}`}>
+                  <Paperclip size={12} />
+                  <span>{file.name}</span>
+                  <IconButton
+                    label={`Remove ${file.name}`}
+                    onClick={() =>
+                      setAttachments((items) =>
+                        items.filter((_, itemIndex) => itemIndex !== index),
+                      )
+                    }
+                  >
+                    <X size={12} />
+                  </IconButton>
+                </span>
+              ))}
+            </div>
+          )}
           <textarea
             ref={composer}
             aria-label="Message Aetherion"
@@ -504,6 +572,23 @@ export default function LiveWorkspace() {
             }}
           />
           <div className="aw-composer-toolbar">
+            <input
+              ref={fileInput}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.txt,.md,.csv,.json,.doc,.docx"
+              hidden
+              onChange={(event) => {
+                addFiles(event.target.files);
+                event.target.value = "";
+              }}
+            />
+            <IconButton
+              label="Attach files or images"
+              onClick={() => fileInput.current?.click()}
+            >
+              <Paperclip size={17} />
+            </IconButton>
             <VoiceControls
               onTranscript={(text) =>
                 setDraft((value) => `${value} ${text}`.trim())

@@ -18,9 +18,16 @@ router = APIRouter()
 tasks = {}
 
 
+class LiveAttachment(BaseModel):
+    name: str = Field(min_length=1, max_length=180)
+    type: str = Field(default="application/octet-stream", max_length=120)
+    size: int = Field(default=0, ge=0, le=20_000_000)
+
+
 class LiveRequest(BaseModel):
     content: str = Field(min_length=1, max_length=16000)
     mode: str = Field(default="quick", pattern="^(quick|standard|council)$")
+    attachments: list[LiveAttachment] = Field(default_factory=list, max_length=8)
     request_id: uuid.UUID
 
 
@@ -184,7 +191,20 @@ async def execute(store, owner, conversation_id, run_id, message_id, mode):
     try:
         async with asyncio.timeout(420):
             history = store.get(owner, conversation_id)["messages"]
-            messages = [{"role": m["role"], "content": m["content"][-8000:]} for m in history[-12:] if m["id"] != message_id and m["content"]]
+            messages = []
+            for item in history[-12:]:
+                if item["id"] == message_id or not item["content"]:
+                    continue
+                message = item["content"][-8000:]
+                attachments = item.get("metadata", {}).get("attachments", [])
+                if attachments:
+                    names = ", ".join(str(file.get("name", "unnamed")) for file in attachments)
+                    message += (
+                        "\n\n[Attached file metadata: "
+                        + names
+                        + ". File contents are not ingested by this advisory runtime.]"
+                    )
+                messages.append({"role": item["role"], "content": message})
             system = "You are Aetherion's Chief of Staff. Give a useful, honest answer. You have no tools, web access, or file execution. Never claim to have executed, researched live sources, or received Council approval. Provide concise conclusions and uncertainty, not private deliberation."
             if mode == "standard":
                 from institution.registry import select, run_specialist
@@ -257,7 +277,17 @@ async def submit(conversation_id: str, request: LiveRequest, user=Depends(requir
         if db.execute("SELECT COUNT(*) FROM live_runs WHERE status='running'").fetchone()[0] >= 8:
             raise HTTPException(429, "The model service is busy. Please retry shortly.")
         now = time.time()
-        db.execute("INSERT INTO messages VALUES (?, ?, 'user', ?, 'text', ?, ?)", (str(uuid.uuid4()), conversation_id, request.content, json.dumps({"mode": request.mode}), now))
+        attachment_metadata = [item.model_dump() for item in request.attachments]
+        db.execute(
+            "INSERT INTO messages VALUES (?, ?, 'user', ?, 'text', ?, ?)",
+            (
+                str(uuid.uuid4()),
+                conversation_id,
+                request.content,
+                json.dumps({"mode": request.mode, "attachments": attachment_metadata}),
+                now,
+            ),
+        )
         db.execute("INSERT INTO messages VALUES (?, ?, 'assistant', '', 'text', ?, ?)", (message_id, conversation_id, json.dumps({"mode": request.mode, "status": "running", "live": True}), now + .001))
         db.execute("INSERT INTO live_runs VALUES (?, ?, ?, 'running')", (run_id, conversation_id, message_id))
         db.execute("UPDATE conversations SET updated_at=? WHERE id=?", (now, conversation_id))

@@ -93,6 +93,9 @@ def test_stream_persistence_idempotency_and_specialists(client, monkeypatch):
     body = {
         "content": "Plan this",
         "mode": "standard",
+        "attachments": [
+            {"name": "brief.pdf", "type": "application/pdf", "size": 1234}
+        ],
         "request_id": str(uuid.uuid4()),
     }
     response = client.post(
@@ -107,6 +110,7 @@ def test_stream_persistence_idempotency_and_specialists(client, monkeypatch):
     )
     messages = wait_finished(client, cid)
     assert len(messages) == 2
+    assert messages[0]["metadata"]["attachments"][0]["name"] == "brief.pdf"
     assert messages[-1]["content"] == "Real protocol test output."
     assert messages[-1]["metadata"]["status"] == "completed"
     events = get_store().events(cid, 0)
@@ -206,6 +210,20 @@ def test_provider_failure_is_never_demo(client, monkeypatch):
             json={
                 "content": "Hello",
                 "mode": "invalid",
+                "request_id": str(uuid.uuid4()),
+            },
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            f"/api/conversations/{cid}/live",
+            headers=headers(),
+            json={
+                "content": "Hello",
+                "attachments": [
+                    {"name": "too-large.bin", "size": 20_000_001}
+                ],
                 "request_id": str(uuid.uuid4()),
             },
         ).status_code
