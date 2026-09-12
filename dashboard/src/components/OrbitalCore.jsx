@@ -14,6 +14,13 @@ export default function OrbitalCore({ active = false }) {
       width = 600,
       height = 320;
     const pointer = { x: 0, y: 0 };
+    const drift = { x: 0, y: 0 };
+    const particles = Array.from({ length: 44 }, (_, index) => ({
+      x: Math.sin(index * 4.17) * 265,
+      y: Math.cos(index * 2.73) * 180,
+      z: Math.sin(index * 1.31) * 240,
+      size: 0.35 + (index % 4) * 0.18,
+    }));
     const resize = new ResizeObserver(([entry]) => {
       width = entry.contentRect.width;
       height = entry.contentRect.height;
@@ -44,9 +51,11 @@ export default function OrbitalCore({ active = false }) {
       if (!media.matches) time += active ? 0.006 : 0.002;
       ctx.clearRect(0, 0, width, height);
       const scale = Math.min(width / 580, height / 430);
+      drift.x += (pointer.x - drift.x) * 0.06;
+      drift.y += (pointer.y - drift.y) * 0.06;
       const project = (x, y, z) => {
-        const a = -0.43 + pointer.y * 0.35,
-          b = time + pointer.x * 0.4;
+        const a = -0.43 + drift.y * 0.35,
+          b = time + drift.x * 0.4;
         const xx = x * Math.cos(b) + z * Math.sin(b),
           zz = -x * Math.sin(b) + z * Math.cos(b);
         const yy = y * Math.cos(a) - zz * Math.sin(a),
@@ -67,6 +76,14 @@ export default function OrbitalCore({ active = false }) {
       glow.addColorStop(1, "transparent");
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, width, height);
+      for (const particle of particles) {
+        const [x, y, depth] = project(particle.x, particle.y, particle.z);
+        const alpha = Math.max(0.05, Math.min(0.38, 0.2 - depth / 1700));
+        ctx.beginPath();
+        ctx.arc(x, y, particle.size * scale, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(164, 206, 190, ${alpha})`;
+        ctx.fill();
+      }
       for (let ring = 0; ring < 36; ring++) {
         ctx.beginPath();
         for (let segment = 0; segment <= 160; segment++) {
@@ -80,7 +97,7 @@ export default function OrbitalCore({ active = false }) {
           );
           segment ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
         }
-        ctx.strokeStyle = `rgba(219,199,149,${0.12 + 0.28 * Math.max(0, Math.sin((ring / 36) * Math.PI * 2))})`;
+        ctx.strokeStyle = `rgba(219,199,149,${0.1 + 0.3 * Math.max(0, Math.sin((ring / 36) * Math.PI * 2))})`;
         ctx.lineWidth = 0.65;
         ctx.stroke();
       }
@@ -100,6 +117,39 @@ export default function OrbitalCore({ active = false }) {
         ctx.lineWidth = 0.7;
         ctx.stroke();
       }
+      const [coreX, coreY] = project(0, 0, 0);
+      const coreRadius = 28 * scale;
+      const core = ctx.createRadialGradient(
+        coreX - coreRadius * 0.35,
+        coreY - coreRadius * 0.4,
+        2,
+        coreX,
+        coreY,
+        coreRadius,
+      );
+      core.addColorStop(0, "rgba(250, 239, 202, .72)");
+      core.addColorStop(0.22, "rgba(215, 204, 161, .32)");
+      core.addColorStop(0.62, "rgba(126, 174, 157, .12)");
+      core.addColorStop(1, "rgba(126, 174, 157, 0)");
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(coreX, coreY, coreRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(239, 225, 183, .35)";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(coreX, coreY, coreRadius * 0.62, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(155, 203, 186, .28)";
+      ctx.beginPath();
+      ctx.arc(
+        coreX,
+        coreY,
+        coreRadius * 0.86,
+        time * 1.8,
+        time * 1.8 + Math.PI * 1.15,
+      );
+      ctx.stroke();
       for (let n = 0; n < 7; n++) {
         const a = (n / 7) * Math.PI * 2,
           [x, y] = project(

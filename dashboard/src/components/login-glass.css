@@ -469,3 +469,150 @@
     background: #17212d;
   }
 }
+
+/* The sign-in surface is a 3D glass portal, not a flat form. */
+.gl-login {
+  perspective: 1600px;
+  background:
+    radial-gradient(circle at 14% 18%, #78bfd21a, transparent 28%),
+    radial-gradient(circle at 84% 76%, #d6b27d15, transparent 30%), #090e17;
+}
+.gl-login::before,
+.gl-login::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  inset: 0;
+}
+.gl-login::before {
+  z-index: -1;
+  opacity: 0.34;
+  background-image:
+    linear-gradient(#afd6ec08 1px, transparent 1px),
+    linear-gradient(90deg, #afd6ec08 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 83%);
+}
+.gl-login::after {
+  z-index: 3;
+  background: radial-gradient(ellipse at center, transparent 45%, #02060d72);
+  mix-blend-mode: multiply;
+}
+.gl-stage,
+.gl-access {
+  position: relative;
+  z-index: 1;
+}
+.gl-sculpture {
+  perspective: 1100px;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 28px 34px #0007);
+}
+.gl-sculpture::before {
+  content: "";
+  position: absolute;
+  inset: 16% 20%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, #9fd8f018, transparent 68%);
+  filter: blur(20px);
+  animation: gl-core-breathe 8s ease-in-out infinite alternate;
+}
+.gl-sculpture model-viewer,
+.gl-orbit-fallback {
+  position: relative;
+  z-index: 1;
+  transform: translateZ(22px);
+  filter: saturate(1.12) contrast(1.04);
+}
+.gl-card {
+  transform: translateZ(18px);
+  transform-style: preserve-3d;
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+  box-shadow:
+    0 35px 110px #0008,
+    0 16px 32px #71abc018,
+    inset 0 1px 0 #ffffff26,
+    inset 0 -1px 0 #ffffff09;
+}
+.gl-card:hover {
+  transform: translateY(-5px) translateZ(28px) rotateX(0.7deg);
+  border-color: #eff7ff45;
+  box-shadow:
+    0 44px 125px #0009,
+    0 20px 45px #71abc024,
+    inset 0 1px 0 #ffffff30,
+    inset 0 -1px 0 #ffffff0d;
+}
+.gl-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    116deg,
+    transparent 14%,
+    #ffffff0b 42%,
+    transparent 62%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.95s ease;
+}
+.gl-card:hover::after {
+  transform: translateX(120%);
+}
+.gl-social button,
+.gl-tabs,
+.gl-pill-row span,
+.gl-motion-toggle {
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+}
+.gl-social button {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+.gl-social button:hover {
+  transform: translateY(-2px) translateZ(8px);
+}
+.gl-pill-row span {
+  background: #d5e9f40a;
+  box-shadow: 0 1px 0 #ffffff0d inset;
+}
+.gl-primary {
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.gl-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px #94bed238;
+}
+@keyframes gl-core-breathe {
+  from {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gl-sculpture::before {
+    animation: none;
+  }
+  .gl-card,
+  .gl-card:hover,
+  .gl-social button:hover,
+  .gl-primary:hover {
+    transform: none;
+  }
+}

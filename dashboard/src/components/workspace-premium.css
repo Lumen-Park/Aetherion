@@ -2148,3 +2148,292 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Depth pass: translucent planes, soft volumetric light, and tactile hover states. */
+.aw {
+  position: relative;
+  isolation: isolate;
+  perspective: 1400px;
+  background:
+    radial-gradient(circle at 78% 14%, #d5c08c0d, transparent 28%),
+    radial-gradient(circle at 18% 86%, #88b9a60b, transparent 34%),
+    var(--surface);
+}
+.aw::before,
+.aw::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.aw::before {
+  z-index: -1;
+  opacity: 0.32;
+  background-image:
+    linear-gradient(#d7c79d08 1px, transparent 1px),
+    linear-gradient(90deg, #d7c79d08 1px, transparent 1px);
+  background-size: 76px 76px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 78%);
+}
+.aw::after {
+  z-index: 30;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    #03050446 100%
+  );
+  mix-blend-mode: multiply;
+}
+.aw-main {
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 53% 22%, #c5b37b0e, transparent 42%),
+    radial-gradient(ellipse at 76% 82%, #73a58f08, transparent 36%), #111313;
+}
+.aw-main::before {
+  content: "";
+  position: absolute;
+  width: 52vw;
+  height: 52vw;
+  top: -30vw;
+  right: -17vw;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, #d9c79a14, transparent 68%);
+  filter: blur(10px);
+  animation: aw-ambient-drift 18s ease-in-out infinite alternate;
+  z-index: -1;
+}
+.aw-main::after {
+  content: "";
+  position: absolute;
+  inset: 74px 0 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 6px,
+    #c5d7bd05 7px,
+    transparent 8px
+  );
+  mask-image: linear-gradient(transparent, black 18%, black 86%, transparent);
+  z-index: 0;
+}
+.aw-main > * {
+  position: relative;
+  z-index: 1;
+}
+.aw-sidebar {
+  background: linear-gradient(155deg, #20231fdd, #121513e8 72%);
+  backdrop-filter: blur(24px) saturate(125%);
+  -webkit-backdrop-filter: blur(24px) saturate(125%);
+  box-shadow: 20px 0 70px #0005;
+}
+.aw-header {
+  background: linear-gradient(180deg, #d5c89b08, transparent);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: 0 10px 35px #0002;
+}
+.aw-orbital-stage {
+  perspective: 900px;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 20px 32px #0006);
+}
+.orbital-core {
+  filter: saturate(1.15) contrast(1.05);
+  transform: translateZ(24px);
+  transform-style: preserve-3d;
+}
+.aw-empty {
+  transform-style: preserve-3d;
+}
+.aw-empty > h1,
+.aw-empty > p,
+.aw-empty > .aw-kicker {
+  text-shadow: 0 8px 30px #0008;
+}
+.aw-composer {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(16px);
+  transform-style: preserve-3d;
+  background:
+    linear-gradient(135deg, #e4d2a20c, transparent 34%),
+    linear-gradient(130deg, #252a25e8, #151b18ec);
+  border-color: #d6c89a38;
+  box-shadow:
+    0 20px 55px #0007,
+    0 1px 0 #ffffff16 inset,
+    0 -1px 0 #d8c28e0b inset;
+  backdrop-filter: blur(24px) saturate(130%);
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+}
+.aw-composer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.58;
+  background: linear-gradient(
+    112deg,
+    transparent 18%,
+    #ffffff0b 43%,
+    transparent 62%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.8s ease;
+}
+.aw-composer:hover::before,
+.aw-composer:focus-within::before {
+  transform: translateX(120%);
+}
+.aw-composer-toolbar,
+.aw-composer textarea {
+  position: relative;
+  z-index: 1;
+}
+.aw-send {
+  box-shadow:
+    0 0 0 1px #f6e3ad33,
+    0 7px 25px #d9bf7b27;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+.aw-send:hover:not(:disabled) {
+  transform: translateY(-2px) translateZ(8px) scale(1.04);
+  box-shadow:
+    0 0 0 1px #f6e3ad66,
+    0 10px 30px #d9bf7b40;
+}
+.aw-message {
+  position: relative;
+  padding: 15px 18px 17px;
+  border: 1px solid #d1c6990f;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff03, #adbf9f04);
+  box-shadow:
+    0 18px 50px #0002,
+    0 1px 0 #ffffff08 inset;
+  animation: aw-float-in 0.45s ease both;
+  backdrop-filter: blur(13px);
+  -webkit-backdrop-filter: blur(13px);
+}
+.aw-message small {
+  color: #b8ad8a;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+}
+.aw-message:hover {
+  border-color: #d5c58f2b;
+  transform: translateY(-2px) translateZ(8px);
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease;
+}
+.aw-council-card {
+  transform-style: preserve-3d;
+  box-shadow:
+    0 18px 45px #0004,
+    0 1px 0 #ffffff0d inset;
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+}
+.aw-council-card:hover {
+  transform: translateY(-3px) rotateX(1deg);
+  box-shadow:
+    0 24px 55px #0006,
+    0 1px 0 #ffffff14 inset;
+}
+.aw-new,
+.aw-preview-badge,
+.aw-composer-toolbar select {
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+}
+.aw-new {
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 8px 25px #0003,
+    0 1px 0 #ffffff0d inset;
+}
+.aw-new::after {
+  content: "";
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  right: -45px;
+  top: -55px;
+  border-radius: 50%;
+  background: #e5d2a61c;
+  filter: blur(14px);
+  transition: transform 0.35s ease;
+}
+.aw-new:hover::after {
+  transform: translate(-20px, 20px) scale(1.35);
+}
+.aw-nav {
+  transform: translateZ(0);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+.aw-nav:hover {
+  transform: translateX(3px);
+  background: linear-gradient(90deg, #ffffff0b, transparent);
+}
+.aw-preview-badge {
+  box-shadow:
+    0 0 20px #92b49d12,
+    0 1px 0 #ffffff0c inset;
+}
+.aw-composer-toolbar select {
+  box-shadow:
+    0 5px 18px #0003,
+    0 1px 0 #ffffff0b inset;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.aw-composer-toolbar select:hover {
+  border-color: #d3c39160;
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 22px #0004,
+    0 1px 0 #ffffff14 inset;
+}
+@keyframes aw-ambient-drift {
+  from {
+    transform: translate3d(-2vw, 2vh, 0) scale(0.95);
+  }
+  to {
+    transform: translate3d(3vw, 8vh, 0) scale(1.08);
+  }
+}
+@keyframes aw-float-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) translateZ(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aw-main::before {
+    animation: none;
+  }
+  .aw-message,
+  .aw-message:hover,
+  .aw-send:hover:not(:disabled) {
+    transform: none;
+  }
+}
