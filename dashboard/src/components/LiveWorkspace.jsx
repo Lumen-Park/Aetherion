@@ -21,6 +21,7 @@ import {
   Paperclip,
   Pencil,
   Trash2,
+  FileText,
 } from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
 import AgentConstellation from "./AgentConstellation";
@@ -143,6 +144,10 @@ export default function LiveWorkspace() {
   const [profileDraft, setProfileDraft] = useState(() => readProfileCache());
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileSync, setProfileSync] = useState("local");
+  const [artifactPanel, setArtifactPanel] = useState(null);
+  const [artifactDraft, setArtifactDraft] = useState("");
+  const [artifactEditing, setArtifactEditing] = useState(false);
+  const [artifactSync, setArtifactSync] = useState("cloud");
   const selection = useRef(null),
     submitting = useRef(false),
     composer = useRef(null),
@@ -153,7 +158,8 @@ export default function LiveWorkspace() {
     draftValue = useRef(""),
     draftSaveTimer = useRef(null),
     draftRevision = useRef(0),
-    draftCloudRevision = useRef(0);
+    draftCloudRevision = useRef(0),
+    artifactSaveRevision = useRef(0);
   const token =
     localStorage.getItem("aetherion_token") ||
     sessionStorage.getItem("aetherion_token");
@@ -196,6 +202,10 @@ export default function LiveWorkspace() {
   useEffect(() => {
     if (active) localStorage.setItem(ACTIVE_CONVERSATION_KEY, active);
     else localStorage.removeItem(ACTIVE_CONVERSATION_KEY);
+  }, [active]);
+  useEffect(() => {
+    setArtifactPanel(null);
+    setArtifactEditing(false);
   }, [active]);
   const getDraftCache = () => {
     if (!draftCache.current) draftCache.current = readDraftCache();
@@ -749,6 +759,8 @@ export default function LiveWorkspace() {
     setAttachments([]);
     setAgents([]);
     setCouncil(null);
+    setArtifactPanel(null);
+    setArtifactEditing(false);
     setPaletteOpen(false);
     setDrawer(false);
   };
@@ -844,6 +856,86 @@ export default function LiveWorkspace() {
       setNotice(`Profile saved locally: ${error.message}`);
     }
   };
+  const openArtifact = async (artifact) => {
+    if (!artifact?.id || !active) return;
+    setArtifactPanel(artifact);
+    setArtifactDraft("");
+    setArtifactEditing(false);
+    setArtifactSync("syncing");
+    try {
+      const response = await request(
+        `/conversations/${active}/artifacts/${artifact.id}`,
+      );
+      const saved = await response.json();
+      setArtifactPanel(saved);
+      setArtifactDraft(saved.content);
+      setArtifactSync("cloud");
+    } catch (error) {
+      setArtifactSync("offline");
+      setNotice(`Artifact unavailable: ${error.message}`);
+    }
+  };
+  const saveArtifact = async () => {
+    if (!artifactPanel || artifactSaveRevision.current) return;
+    artifactSaveRevision.current = 1;
+    setArtifactSync("saving");
+    try {
+      const response = await request(
+        `/conversations/${active}/artifacts/${artifactPanel.id}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            title: artifactPanel.title,
+            content: artifactDraft,
+            revision: artifactPanel.revision,
+          }),
+        },
+      );
+      const saved = await response.json();
+      setArtifactPanel(saved);
+      setArtifactDraft(saved.content);
+      setArtifactEditing(false);
+      setArtifactSync("cloud");
+      setMessages((current) =>
+        current.map((message) =>
+          message.metadata?.artifact?.id === saved.id
+            ? {
+                ...message,
+                metadata: {
+                  ...message.metadata,
+                  artifact: {
+                    ...message.metadata.artifact,
+                    title: saved.title,
+                    revision: saved.revision,
+                    updated_at: saved.updated_at,
+                  },
+                },
+              }
+            : message,
+        ),
+      );
+      setNotice("Artifact changes synced to the workspace.");
+    } catch (error) {
+      if (
+        error.status === 409 &&
+        error.detail &&
+        typeof error.detail === "object"
+      ) {
+        setArtifactPanel(error.detail);
+        setArtifactDraft(error.detail.content || "");
+        setArtifactEditing(false);
+        setArtifactSync("conflict");
+        setNotice(
+          "Artifact changed elsewhere. The workspace version is loaded.",
+        );
+      } else {
+        setArtifactSync("offline");
+        setNotice(`Artifact saved locally: ${error.message}`);
+      }
+    } finally {
+      artifactSaveRevision.current = 0;
+    }
+  };
   const startRename = (chat) => {
     setConfirmingChat(null);
     setEditingChat(chat.id);
@@ -908,7 +1000,7 @@ export default function LiveWorkspace() {
     }
   };
   return (
-    <div className="aw">
+    <div className={`aw ${artifactPanel ? "aw-with-panel" : ""}`}>
       <aside
         className="aw-sidebar"
         style={
@@ -1178,6 +1270,22 @@ export default function LiveWorkspace() {
                     ))}
                   </div>
                 </section>
+              )}
+              {message.role === "assistant" && message.metadata?.artifact && (
+                <button
+                  className="aw-artifact-link"
+                  type="button"
+                  onClick={() => openArtifact(message.metadata.artifact)}
+                >
+                  <span>
+                    <FileText size={20} />
+                  </span>
+                  <div>
+                    <b>{message.metadata.artifact.title}</b>
+                    <small>Markdown document · Open in studio</small>
+                  </div>
+                  <ChevronRight size={18} />
+                </button>
               )}
               {message.metadata?.council && (
                 <section className="aw-council-card aw-live-council-card">
@@ -1520,6 +1628,89 @@ export default function LiveWorkspace() {
           </div>
         </div>
       </main>
+      {artifactPanel && (
+        <aside className="aw-panel">
+          <header>
+            <div>
+              <span className="aw-kicker">WORKSPACE ARTIFACT</span>
+              <h2>Artifact studio</h2>
+            </div>
+            <IconButton
+              label="Close artifact studio"
+              onClick={() => {
+                setArtifactPanel(null);
+                setArtifactEditing(false);
+              }}
+            >
+              <X size={18} />
+            </IconButton>
+          </header>
+          <div className="aw-panel-content">
+            <div className="aw-artifact-toolbar">
+              <div>
+                <FileText size={17} />
+                <b>{artifactPanel.title}</b>
+              </div>
+              <div>
+                <IconButton
+                  label={artifactEditing ? "Preview artifact" : "Edit artifact"}
+                  onClick={() => setArtifactEditing((current) => !current)}
+                  disabled={artifactSync === "syncing"}
+                >
+                  {artifactEditing ? <Check size={15} /> : <Pencil size={15} />}
+                </IconButton>
+                <IconButton
+                  label="Download artifact"
+                  onClick={() => download(artifactDraft, "aetherion-brief.md")}
+                  disabled={artifactSync === "syncing" || !artifactDraft}
+                >
+                  <Download size={15} />
+                </IconButton>
+              </div>
+            </div>
+            <span className="aw-artifact-status">
+              {artifactSync === "syncing"
+                ? "Loading from workspace…"
+                : artifactSync === "saving"
+                  ? "Saving revision…"
+                  : artifactSync === "conflict"
+                    ? "Workspace revision loaded after a conflict"
+                    : artifactEditing
+                      ? `Editing · revision ${artifactPanel.revision}`
+                      : `Markdown document · revision ${artifactPanel.revision}`}
+            </span>
+            {artifactSync === "syncing" ? (
+              <div className="aw-panel-empty">
+                <FileText size={28} />
+                <p>Loading the persisted artifact.</p>
+              </div>
+            ) : artifactEditing ? (
+              <>
+                <textarea
+                  className="aw-artifact-editor"
+                  aria-label="Artifact content"
+                  value={artifactDraft}
+                  onChange={(event) => setArtifactDraft(event.target.value)}
+                />
+                <button
+                  className="aw-primary"
+                  type="button"
+                  onClick={saveArtifact}
+                  disabled={artifactSync === "saving"}
+                >
+                  Save revision <Check size={15} />
+                </button>
+              </>
+            ) : (
+              <div className="aw-markdown aw-artifact-preview">
+                <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+                  {artifactDraft}
+                </ReactMarkdown>
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
       {profileOpen && (
         <div
           className="aw-backdrop"

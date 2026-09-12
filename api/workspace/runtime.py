@@ -199,7 +199,7 @@ async def execute(
     attachment_context=None,
     source_metadata=None,
 ):
-    content, status, council = "", "completed", None
+    content, status, council, artifact = "", "completed", None, None
     sources = source_metadata if mode == "research" else []
     try:
         async with asyncio.timeout(420):
@@ -273,9 +273,22 @@ async def execute(
         if not content:
             content = explanation
     finally:
+        if status == "completed" and content.strip() and mode in {"standard", "research"}:
+            artifact = store.create_artifact(
+                owner,
+                conversation_id,
+                message_id,
+                "Research brief" if mode == "research" else "Mission brief",
+                content,
+            )
         final_metadata = {"council": council} if council else {}
         if sources:
             final_metadata["sources"] = sources
+        if artifact:
+            final_metadata["artifact"] = {
+                key: artifact[key]
+                for key in ("id", "title", "mime_type", "revision", "updated_at")
+            }
         persist(
             store,
             conversation_id,
@@ -286,7 +299,7 @@ async def execute(
         )
         with store.connect() as db:
             db.execute("UPDATE live_runs SET status=? WHERE id=?", (status, run_id))
-        store.emit(conversation_id, "message.finished", {"id": message_id, "content": content, "status": status, "run_id": run_id, "council": council})
+        store.emit(conversation_id, "message.finished", {"id": message_id, "content": content, "status": status, "run_id": run_id, "council": council, "artifact": final_metadata.get("artifact")})
         tasks.pop(run_id, None)
 
 

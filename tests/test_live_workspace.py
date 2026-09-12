@@ -149,6 +149,65 @@ def test_profile_is_owner_scoped_and_persistent(client):
     )
 
 
+def test_research_answer_creates_owner_scoped_editable_artifact(
+    client, monkeypatch
+):
+    async def provider(messages):
+        yield "# Evidence brief\n\nA bounded finding."
+
+    monkeypatch.setattr(runtime, "tokens", provider)
+    cid = create(client)
+    response = client.post(
+        f"/api/conversations/{cid}/live",
+        headers=headers(),
+        json={
+            "content": "Prepare a brief.",
+            "mode": "research",
+            "request_id": str(uuid.uuid4()),
+        },
+    )
+    assert response.status_code == 202
+    message = wait_finished(client, cid)[-1]
+    artifact_meta = message["metadata"]["artifact"]
+    assert artifact_meta["title"] == "Research brief"
+    assert artifact_meta["revision"] == 1
+
+    artifact_url = f"/api/conversations/{cid}/artifacts/{artifact_meta['id']}"
+    artifact = client.get(artifact_url, headers=headers())
+    assert artifact.status_code == 200
+    assert artifact.json()["content"] == "# Evidence brief\n\nA bounded finding."
+    assert client.get(
+        f"/api/conversations/{cid}/artifacts", headers=headers()
+    ).json()["artifacts"][0]["id"] == artifact_meta["id"]
+    saved = client.put(
+        artifact_url,
+        headers=headers(),
+        json={
+            "title": "Reviewed brief",
+            "content": "# Reviewed\n\nHuman edit.",
+            "revision": 1,
+        },
+    )
+    assert saved.status_code == 200
+    assert saved.json()["revision"] == 2
+    conflict = client.put(
+        artifact_url,
+        headers=headers(),
+        json={"title": "Stale", "content": "Stale edit.", "revision": 1},
+    )
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"]["revision"] == 2
+    assert client.get(artifact_url, headers=headers("bob")).status_code == 404
+    assert (
+        client.put(
+            artifact_url,
+            headers=headers("reader"),
+            json={"title": "Reader", "content": "Nope", "revision": 2},
+        ).status_code
+        == 403
+    )
+
+
 def test_stream_persistence_idempotency_and_specialists(client, monkeypatch):
     async def provider(messages):
         yield "Real protocol "

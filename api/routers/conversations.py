@@ -62,6 +62,12 @@ class ProfileUpdate(BaseModel):
     council: List[str] = Field(min_length=7, max_length=7)
 
 
+class ArtifactUpdate(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    content: str = Field(default="", max_length=200_000)
+    revision: Optional[int] = Field(default=None, ge=1)
+
+
 class DraftUpdate(BaseModel):
     content: str = Field(default="", max_length=16_000)
     revision: Optional[int] = Field(default=None, ge=0)
@@ -121,6 +127,16 @@ class ConversationStore:
                     owner TEXT PRIMARY KEY, name TEXT NOT NULL, nickname TEXT NOT NULL,
                     council TEXT NOT NULL, updated_at REAL NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS conversation_artifacts (
+                    id TEXT PRIMARY KEY, owner TEXT NOT NULL,
+                    conversation_id TEXT NOT NULL, message_id TEXT NOT NULL,
+                    title TEXT NOT NULL, mime_type TEXT NOT NULL,
+                    content TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 1,
+                    created_at REAL NOT NULL, updated_at REAL NOT NULL,
+                    FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS artifacts_owner_conversation
+                    ON conversation_artifacts(owner, conversation_id, updated_at DESC);
                 """)
             draft_columns = {
                 row["name"] for row in db.execute("PRAGMA table_info(conversation_drafts)")
@@ -458,6 +474,145 @@ class ConversationStore:
             "updated_at": now,
         }
 
+    @staticmethod
+    def _artifact(row):
+        return {
+            "id": row["id"],
+            "owner": row["owner"],
+            "conversation_id": row["conversation_id"],
+            "message_id": row["message_id"],
+            "title": row["title"],
+            "mime_type": row["mime_type"],
+            "content": row["content"],
+            "revision": row["revision"],
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
+        }
+
+    def create_artifact(
+        self,
+        owner: str,
+        conversation_id: str,
+        message_id: str,
+        title: str,
+        content: str,
+        mime_type: str = "text/markdown",
+    ):
+        artifact_id, now = str(uuid.uuid4()), time.time()
+        with self._lock, self.connect() as db:
+            conversation = db.execute(
+                "SELECT 1 FROM conversations WHERE id=? AND owner=?",
+                (conversation_id, owner),
+            ).fetchone()
+            if not conversation:
+                return None
+            db.execute(
+                """
+                INSERT INTO conversation_artifacts(
+                    id, owner, conversation_id, message_id, title, mime_type,
+                    content, revision, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                """,
+                (
+                    artifact_id,
+                    owner,
+                    conversation_id,
+                    message_id,
+                    title.strip() or "Aetherion brief",
+                    mime_type,
+                    content,
+                    now,
+                    now,
+                ),
+            )
+            row = db.execute(
+                "SELECT * FROM conversation_artifacts WHERE id=?", (artifact_id,)
+            ).fetchone()
+        artifact = self._artifact(row)
+        artifact.pop("owner", None)
+        self.emit(conversation_id, "artifact.created", artifact)
+        return artifact
+
+    def list_artifacts(self, owner: str, conversation_id: str):
+        with self.connect() as db:
+            rows = db.execute(
+                """
+                SELECT * FROM conversation_artifacts
+                WHERE owner=? AND conversation_id=?
+                ORDER BY updated_at DESC
+                """,
+                (owner, conversation_id),
+            ).fetchall()
+        artifacts = []
+        for row in rows:
+            artifact = self._artifact(row)
+            artifact.pop("owner", None)
+            artifacts.append(artifact)
+        return artifacts
+
+    def get_artifact(self, owner: str, conversation_id: str, artifact_id: str):
+        with self.connect() as db:
+            row = db.execute(
+                """
+                SELECT * FROM conversation_artifacts
+                WHERE id=? AND owner=? AND conversation_id=?
+                """,
+                (artifact_id, owner, conversation_id),
+            ).fetchone()
+        if not row:
+            return None
+        artifact = self._artifact(row)
+        artifact.pop("owner", None)
+        return artifact
+
+    def update_artifact(
+        self,
+        owner: str,
+        conversation_id: str,
+        artifact_id: str,
+        update: ArtifactUpdate,
+    ):
+        now = time.time()
+        with self._lock, self.connect() as db:
+            row = db.execute(
+                """
+                SELECT * FROM conversation_artifacts
+                WHERE id=? AND owner=? AND conversation_id=?
+                """,
+                (artifact_id, owner, conversation_id),
+            ).fetchone()
+            if not row:
+                return None
+            if update.revision is not None and update.revision != row["revision"]:
+                conflict = self._artifact(row)
+                conflict.pop("owner", None)
+                conflict["conflict"] = True
+                return conflict
+            revision = row["revision"] + 1
+            db.execute(
+                """
+                UPDATE conversation_artifacts
+                SET title=?, content=?, revision=?, updated_at=?
+                WHERE id=? AND owner=? AND conversation_id=?
+                """,
+                (
+                    update.title.strip() or row["title"],
+                    update.content,
+                    revision,
+                    now,
+                    artifact_id,
+                    owner,
+                    conversation_id,
+                ),
+            )
+            saved = db.execute(
+                "SELECT * FROM conversation_artifacts WHERE id=?", (artifact_id,)
+            ).fetchone()
+        artifact = self._artifact(saved)
+        artifact.pop("owner", None)
+        self.emit(conversation_id, "artifact.updated", artifact)
+        return artifact
+
     def set_draft(
         self,
         owner: str,
@@ -585,6 +740,43 @@ def get_conversation(conversation_id: str, user=Depends(get_current_user)):
     result = get_store().get(owner_id(user), conversation_id)
     if not result:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    return result
+
+
+@router.get("/conversations/{conversation_id}/artifacts")
+def list_conversation_artifacts(
+    conversation_id: str, user=Depends(get_current_user)
+):
+    store, owner = get_store(), owner_id(user)
+    if not store.get(owner, conversation_id):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"artifacts": store.list_artifacts(owner, conversation_id)}
+
+
+@router.get("/conversations/{conversation_id}/artifacts/{artifact_id}")
+def get_conversation_artifact(
+    conversation_id: str, artifact_id: str, user=Depends(get_current_user)
+):
+    result = get_store().get_artifact(owner_id(user), conversation_id, artifact_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    return result
+
+
+@router.put("/conversations/{conversation_id}/artifacts/{artifact_id}")
+def update_conversation_artifact(
+    conversation_id: str,
+    artifact_id: str,
+    request: ArtifactUpdate,
+    user=Depends(require_role("operator")),
+):
+    result = get_store().update_artifact(
+        owner_id(user), conversation_id, artifact_id, request
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+    if result.get("conflict"):
+        raise HTTPException(status_code=409, detail=result)
     return result
 
 
