@@ -32,6 +32,7 @@ import {
   LockKeyhole,
 } from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
+import WorkspaceWelcome from "./WorkspaceWelcome";
 import AgentConstellation from "./AgentConstellation";
 import LiveWorkspace from "./LiveWorkspace";
 import VoiceControls from "./VoiceControls";
@@ -544,19 +545,7 @@ function DemoWorkspace() {
                   <i /> ONE DIRECTION
                 </div>
               </div>
-              <span className="aw-kicker">
-                <i /> YOUR IDEAS. AN ENTIRE INSTITUTION.
-              </span>
-              <h1>
-                Extraordinary starts
-                <br />
-                with a <em>conversation.</em>
-              </h1>
-              <p>
-                Think bigger, {profile.nickname}. Your Chief of Staff brings
-                <br className="aw-desktop-br" /> the right minds together to
-                make it happen.
-              </p>
+              <WorkspaceWelcome nickname={profile.nickname} />
               <div className="aw-quick-links">
                 <button onClick={() => openPanel("council")}>
                   <span className="aw-stacked-dots">

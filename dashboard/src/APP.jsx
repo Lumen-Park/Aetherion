@@ -69,6 +69,11 @@ function App() {
           const storage = remember ? localStorage : sessionStorage;
           storage.setItem("aetherion_token", token);
           localStorage.setItem("aetherion_workspace", workspace);
+          window.history.replaceState(
+            null,
+            "",
+            import.meta.env.BASE_URL + "workspace",
+          );
           setWorkspaceId(workspace);
           setIsAuthenticated(true);
         }}

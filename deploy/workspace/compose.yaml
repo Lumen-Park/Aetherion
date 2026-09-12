@@ -13,10 +13,13 @@ services:
       AETHERION_CHAT_MODEL: ${AETHERION_CHAT_MODEL:?Set an installed Ollama model}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:?Set a reachable private Ollama URL}
       AETHERION_RESEARCH_ALLOWLIST: ${AETHERION_RESEARCH_ALLOWLIST:-}
+      AETHERION_GEOIP_DATABASE: ${AETHERION_GEOIP_DATABASE:-}
+      AETHERION_TRUSTED_PROXY_CIDRS: ${AETHERION_TRUSTED_PROXY_CIDRS:-}
       AETHERION_CONVERSATIONS_DB: /data/conversations.sqlite3
       AETHERION_CORS_ORIGINS: https://${AETHERION_DOMAIN:?Set your domain}
     volumes:
       - conversation_data:/data
+      - ./geoip:/geoip:ro
     expose:
       - "8000"
     healthcheck:

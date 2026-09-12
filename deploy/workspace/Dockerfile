@@ -8,4 +8,4 @@ COPY institution /app/institution
 RUN mkdir /data && chown aetherion:aetherion /data
 USER aetherion
 EXPOSE 8000
-CMD ["uvicorn", "api.workspace_app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["uvicorn", "api.workspace_app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-proxy-headers"]

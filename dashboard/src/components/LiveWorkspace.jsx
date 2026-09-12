@@ -25,6 +25,7 @@ import {
   FileText,
 } from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
+import WorkspaceWelcome from "./WorkspaceWelcome";
 import AgentConstellation from "./AgentConstellation";
 import VoiceControls from "./VoiceControls";
 import { IconButton, download } from "./WorkspaceParts";
@@ -1339,11 +1340,7 @@ export default function LiveWorkspace() {
           {!messages.length && (
             <div className="aw-empty">
               <OrbitalCore />
-              <h1>Bring your next idea to life, {profile.nickname}.</h1>
-              <p>
-                Ask the Chief of Staff, bring in a Planner and Reviewer, or ask
-                the Council.
-              </p>
+              <WorkspaceWelcome nickname={profile.nickname} />
             </div>
           )}
           {messages.map((message, index) => (

@@ -1,0 +1,141 @@
+.app-shell .aw {
+  background:
+    radial-gradient(ellipse at 55% 8%, #9bbbd515, transparent 50%),
+    radial-gradient(ellipse at 94% 90%, #9295c310, transparent 45%), #0d141e;
+}
+.aw .aw-main {
+  background: transparent;
+  min-height: 0;
+}
+.aw .aw-sidebar {
+  background: linear-gradient(155deg, #bbcce110, #101926b0);
+  border-right: 1px solid #c6dff21a;
+  backdrop-filter: blur(28px);
+}
+.aw .aw-header {
+  background: #0d162577;
+  backdrop-filter: blur(24px);
+  border-color: #c6dff21a;
+}
+.aw .aw-composer {
+  border: 1px solid #bdd6f132;
+  border-radius: 18px;
+  background: linear-gradient(120deg, #c6d8f215, #a5b9da06);
+  backdrop-filter: blur(26px);
+  box-shadow:
+    0 20px 60px #0003,
+    inset 0 1px #ffffff15;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.aw .aw-composer:focus-within {
+  border-color: #c3dff26b;
+  box-shadow:
+    0 20px 60px #0004,
+    0 0 35px #a2c7ea08,
+    inset 0 1px #ffffff22;
+}
+.aw .aw-composer-zone {
+  background: linear-gradient(transparent, #0d141eaa);
+}
+.aw .aw-panel {
+  background: linear-gradient(145deg, #263246c9, #111b2bf5);
+  backdrop-filter: blur(30px);
+}
+.aw .aw-orbital-stage {
+  filter: drop-shadow(0 14px 32px #a0c8f512);
+}
+.aw .aw-personal-welcome {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.aw .aw-personal-welcome h1 {
+  color: #edf3fa;
+  font-size: clamp(28px, 3.5vw, 47px);
+  line-height: 1.17;
+  letter-spacing: -0.045em;
+  font-weight: 400;
+  margin: 20px 0 15px;
+  overflow-wrap: anywhere;
+}
+.aw .aw-personal-welcome h1 em {
+  color: #bfcee1;
+  font-weight: 400;
+  font-family: Georgia, serif;
+}
+.aw .aw-personal-welcome p {
+  color: #a7b6c9;
+  font-size: 12px;
+  line-height: 1.85;
+}
+.aw .aw-local-moment {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  color: #a5bed2;
+  font-size: 10px;
+  margin: 4px auto 0;
+}
+.aw .aw-local-moment i {
+  height: 3px;
+  width: 3px;
+  border-radius: 50%;
+  background: #8cabc5;
+}
+.aw .aw-local-moment time {
+  font-variant-numeric: tabular-nums;
+}
+.aw .aw-local-zone {
+  border-left: 1px solid #c4d9ee2a;
+  padding-left: 10px;
+  color: #879db8;
+}
+.aw .aw-scroll,
+.aw .aw-message-scroll {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #93abc74d transparent;
+  overscroll-behavior: contain;
+}
+.aw .aw-prompt-card {
+  background: linear-gradient(130deg, #b5cce70c, #a2b9d004);
+  border-color: #b6cce921;
+}
+.aw .aw-prompt-card:hover {
+  border-color: #bfd6ed60;
+  box-shadow:
+    0 8px 30px #0003,
+    inset 0 1px #ffffff0d;
+}
+@media (max-width: 600px) {
+  .aw .aw-local-moment {
+    font-size: 9px;
+    gap: 7px;
+  }
+  .aw .aw-local-zone {
+    flex-basis: 100%;
+    border: 0;
+    padding: 0;
+  }
+  .aw .aw-personal-welcome h1 {
+    font-size: 30px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aw .aw-scroll,
+  .aw .aw-message-scroll {
+    scroll-behavior: auto;
+  }
+  .aw .aw-composer {
+    transition: none;
+  }
+}
+
+/* Decorative orbital layers should not create horizontal page scrolling. */
+.aw .aw-scroll {
+  overflow-x: hidden;
+}

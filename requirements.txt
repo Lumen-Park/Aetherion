@@ -6,6 +6,7 @@ schedule>=1.2.0
 Pillow>=10.0.0
 chromadb>=0.4.0
 python-dotenv>=1.0.0
+maxminddb>=2.6,<4
 pydantic>=2.0.0
 celery>=5.3.0
 redis>=5.0.0

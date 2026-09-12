@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from core.auth import AuthManager
 from api.routers.conversations import get_store, router as conversations
 from api.workspace import runtime
+from api.routers.experience import router as experience
 
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ persistent = APIRouter()
 persistent.routes = [route for route in conversations.routes if not route.path.endswith(("/messages", "/cancel"))]
 app.include_router(persistent, prefix="/api")
 app.include_router(runtime.router, prefix="/api")
+app.include_router(experience, prefix="/api")
 
 
 class Login(BaseModel):

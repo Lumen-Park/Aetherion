@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from api.metrics import router as metrics_router
+from api.routers.experience import router as experience_router
 from api.middleware.rate_limit import RateLimiter
 from api.routers import (
     agent_catalog,
@@ -103,6 +104,7 @@ app.include_router(compliance.router, prefix="/api", tags=["Compliance"])
 app.include_router(conversations.router, prefix="/api", tags=["Conversations"])
 app.include_router(institution.router, prefix="/api", tags=["Institution"])
 app.include_router(metrics_router, prefix="/api", tags=["Metrics"])
+app.include_router(experience_router, prefix="/api", tags=["Experience"])
 
 # Serve React static files (after building frontend)
 app.mount("/", StaticFiles(directory="api/static", html=True), name="static")

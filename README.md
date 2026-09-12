@@ -1,4 +1,4 @@
-> **Workspace implementation status:** See [LIVE_WORKSPACE.md](LIVE_WORKSPACE.md) for verified capabilities, remaining integrations, and deployment requirements. Production deployment and Blender assets are not complete.
+> **Workspace implementation status:** See [LIVE_WORKSPACE.md](LIVE_WORKSPACE.md) for verified capabilities, remaining integrations, and deployment requirements. See [DESIGN_EXPERIENCE.md](DESIGN_EXPERIENCE.md) for the glass interface, interactive 3D sculpture, global phone signup, and local-time greetings. Production provider setup and deployment remain operator requirements.
 
 <p align="center">
   <img src="https://img.shields.io/badge/AETHERION-v7.0.0-000000?style=for-the-badge&logo=starship&logoColor=white&labelColor=1a1a2e" alt="Version">
