@@ -234,7 +234,9 @@ def test_draft_sync_persists_and_clears_per_conversation(client):
     )
 
 
-def test_text_attachments_are_ingested_without_persisting_content(client, monkeypatch):
+def test_text_attachments_are_ingested_without_persisting_content(
+    client, monkeypatch
+):
     captured = {}
 
     async def provider(messages):
@@ -261,9 +263,10 @@ def test_text_attachments_are_ingested_without_persisting_content(client, monkey
     )
     assert response.status_code == 202
     messages = wait_finished(client, cid)
-    assert "The launch is scheduled for Friday." in captured["messages"][-1][
-        "content"
-    ]
+    assert (
+        "The launch is scheduled for Friday."
+        in captured["messages"][-1]["content"]
+    )
     attachment = messages[0]["metadata"]["attachments"][0]
     assert attachment["text_ingested"] is True
     assert "content" not in attachment
@@ -274,8 +277,16 @@ def test_text_attachments_are_ingested_without_persisting_content(client, monkey
             json={
                 "content": "Too much text",
                 "attachments": [
-                    {"name": "large.txt", "type": "text/plain", "content": "x" * 50_000},
-                    {"name": "more.txt", "type": "text/plain", "content": "y" * 50_000},
+                    {
+                        "name": "large.txt",
+                        "type": "text/plain",
+                        "content": "x" * 50_000,
+                    },
+                    {
+                        "name": "more.txt",
+                        "type": "text/plain",
+                        "content": "y" * 50_000,
+                    },
                     {"name": "last.txt", "type": "text/plain", "content": "z"},
                 ],
                 "request_id": str(uuid.uuid4()),
