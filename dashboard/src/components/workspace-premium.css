@@ -1192,6 +1192,65 @@
 .aw-panel-link > svg:last-child {
   margin-left: auto;
 }
+.aw-constellation {
+  position: relative;
+  min-height: 238px;
+  margin: 2px -7px 24px;
+  overflow: hidden;
+  border: 1px solid #c9ba8d25;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 43%, #d6c28f0e, transparent 45%),
+    linear-gradient(145deg, #d8c59308, #8fb39c06 52%, #090e0d55);
+  box-shadow:
+    0 18px 40px #0005,
+    0 1px 0 #ffffff0c inset;
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+}
+.aw-constellation::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  background-image:
+    linear-gradient(#d8c99e08 1px, transparent 1px),
+    linear-gradient(90deg, #d8c99e08 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 82%);
+}
+.aw-constellation canvas {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 238px;
+  cursor: crosshair;
+}
+.aw-constellation-meta {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  display: grid;
+  gap: 3px;
+  pointer-events: none;
+  text-shadow: 0 2px 12px #000;
+}
+.aw-constellation-meta span {
+  color: #b5aa86;
+  font-size: 7px;
+  letter-spacing: 1.45px;
+}
+.aw-constellation-meta b {
+  color: #e1dfca;
+  font-size: 12px;
+  font-weight: 500;
+}
+.aw-constellation-meta small {
+  color: #8f9b89;
+  font-size: 8px;
+}
 .aw-timeline {
   display: flex;
   gap: 12px;

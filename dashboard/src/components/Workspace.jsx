@@ -32,6 +32,7 @@ import {
   LockKeyhole,
 } from "lucide-react";
 import OrbitalCore from "./OrbitalCore";
+import AgentConstellation from "./AgentConstellation";
 import LiveWorkspace from "./LiveWorkspace";
 import VoiceControls from "./VoiceControls";
 import {
@@ -890,6 +891,7 @@ function DemoWorkspace() {
                       : "Your mission timeline appears here as the conversation develops."}
                   </p>
                 </div>
+                <AgentConstellation />
                 <div className="aw-section-label">
                   ACTIVITY <span>LOCAL PREVIEW</span>
                 </div>
