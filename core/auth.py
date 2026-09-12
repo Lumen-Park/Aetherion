@@ -77,6 +77,7 @@ class AuthManager:
 
         try:
             from core.oauth import OAuthManager
+
             oauth = OAuthManager()
             user_info = oauth.get_user_info(provider_name, access_token)
             # Map OAuth user to a role (default to operator)
