@@ -7,7 +7,7 @@ from api.dependencies import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from core.auth import AuthManager
-from api.routers.conversations import router as conversations
+from api.routers.conversations import get_store, router as conversations
 from api.workspace import runtime
 
 
@@ -25,7 +25,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Aetherion Live Workspace", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in os.getenv("AETHERION_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if x.strip()], allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["Authorization", "Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in os.getenv("AETHERION_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if x.strip()], allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allow_headers=["Authorization", "Content-Type"])
 # Mount persistent CRUD and authenticated event routes from the legacy router.
 from fastapi import APIRouter
 persistent = APIRouter()
@@ -55,6 +55,35 @@ def health():
         "model_configured": bool(os.getenv("AETHERION_CHAT_MODEL")),
         "modes": ["quick", "standard", "research", "council"],
     }
+
+
+@app.get("/health/ready")
+def readiness():
+    auth = AuthManager()
+    checks = {
+        "auth": bool(
+            auth.auth_enabled
+            and auth.api_keys
+            and len(auth.jwt_secret) >= 32
+        ),
+        "model": bool(os.getenv("AETHERION_CHAT_MODEL", "").strip()),
+        "database": False,
+    }
+    try:
+        with get_store().connect() as db:
+            db.execute("SELECT 1").fetchone()
+        checks["database"] = True
+    except Exception:
+        checks["database"] = False
+    ready = all(checks.values())
+    payload = {
+        "status": "ready" if ready else "not_ready",
+        "checks": checks,
+        "model": os.getenv("AETHERION_CHAT_MODEL", "").strip() or None,
+    }
+    if not ready:
+        raise HTTPException(status_code=503, detail=payload)
+    return payload
 
 
 @app.get("/api/auth/providers")

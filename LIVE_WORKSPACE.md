@@ -40,9 +40,9 @@ Use `deploy/workspace/compose.yaml` for the dedicated service, persistent storag
 2. Copy `deploy/workspace/.env.example` to `deploy/workspace/.env`. Set a distinct random API key for every user (`key:operator`), a random JWT secret of at least 32 characters, domain, model name, and private Ollama URL. Do not commit secrets.
 3. Build the dashboard with `npm ci` then `npm run build` in `dashboard`. Do not use the demo build for production. Leave `VITE_API_ORIGIN` empty for the same-origin proxy; if using a separate API origin, set its HTTPS origin at build time and explicitly allow the frontend origin on the service.
 4. Run `docker compose --env-file deploy/workspace/.env -f deploy/workspace/compose.yaml up -d --build` from the repository root.
-5. Verify HTTPS sign-in, isolation with two independent accounts, model output, cancellation, restart recovery, and database backup/restore before inviting users. API health reports process liveness, not model readiness.
+5. Verify HTTPS sign-in, isolation with two independent accounts, readiness, model output, cancellation, restart recovery, and database backup/restore before inviting users. Readiness checks configuration and storage but does not prove that the remote model can answer a prompt.
 
-Before public rollout, add gateway rate limiting, monitoring, a tested backup schedule, token revocation policy, and capacity limits across accounts. Do not expose Ollama publicly. The configuration is a deployment candidate, not evidence of a completed production rollout.
+Before public rollout, add gateway rate limiting, monitoring, a tested backup schedule, token revocation policy, and capacity limits across accounts. Do not expose Ollama publicly. `/health/live` reports process liveness; `/health/ready` confirms authentication, database access, and model configuration. The configuration is a deployment candidate, not evidence of a completed production rollout.
 
 ## Validation
 

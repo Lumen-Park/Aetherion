@@ -93,6 +93,24 @@ def test_health_advertises_all_live_modes(client):
     ]
 
 
+def test_readiness_reports_configuration_and_storage(client, monkeypatch):
+    response = client.get("/health/ready")
+    assert response.status_code == 503
+    assert response.json()["detail"] == {
+        "status": "not_ready",
+        "checks": {"auth": True, "model": False, "database": True},
+        "model": None,
+    }
+    monkeypatch.setenv("AETHERION_CHAT_MODEL", "qwen3:8b")
+    ready = client.get("/health/ready")
+    assert ready.status_code == 200
+    assert ready.json() == {
+        "status": "ready",
+        "checks": {"auth": True, "model": True, "database": True},
+        "model": "qwen3:8b",
+    }
+
+
 def test_profile_is_owner_scoped_and_persistent(client):
     default = client.get("/api/profile", headers=headers()).json()
     assert default["name"] == "Operator"
